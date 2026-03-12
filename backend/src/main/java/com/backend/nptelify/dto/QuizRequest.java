@@ -1,0 +1,58 @@
+package com.backend.nptelify.dto;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
+import java.util.List;
+
+public class QuizRequest {
+
+    @NotBlank
+    private String title;
+
+    @NotBlank
+    private String subject;
+
+    @Min(1)
+    private int durationMinutes;
+
+    @NotEmpty
+    @Valid
+    private List<QuestionDto> questions;
+
+    // Getters and setters
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public String getSubject() { return subject; }
+    public void setSubject(String subject) { this.subject = subject; }
+
+    public int getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
+
+    public List<QuestionDto> getQuestions() { return questions; }
+    public void setQuestions(List<QuestionDto> questions) { this.questions = questions; }
+
+    public static class QuestionDto {
+        @NotBlank
+        private String text;
+
+        @NotEmpty
+        private List<String> options;
+
+        @NotNull
+        private Integer correctOption;
+
+        public String getText() { return text; }
+        public void setText(String text) { this.text = text; }
+
+        public List<String> getOptions() { return options; }
+        public void setOptions(List<String> options) { this.options = options; }
+
+        public Integer getCorrectOption() { return correctOption; }
+        public void setCorrectOption(Integer correctOption) { this.correctOption = correctOption; }
+    }
+}
