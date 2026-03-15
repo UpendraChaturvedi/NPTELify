@@ -1,7 +1,15 @@
-const getAuthHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
+const API_BASE_URL = "http://localhost:8080";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (token && token !== "null" && token !== "undefined") {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 function clearAuthAndRedirect() {
   localStorage.removeItem("token");
@@ -11,15 +19,49 @@ function clearAuthAndRedirect() {
 }
 
 async function request(url, options = {}) {
-  const res = await fetch(url, { ...options, headers: getAuthHeaders() });
+  const authHeaders = getAuthHeaders();
+  const fullUrl = API_BASE_URL + url;
+  const token = localStorage.getItem("token");
+  
+  const fetchOptions = {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...options.headers,
+    }
+  };
+  
+  console.log("🔵 API Request:", {
+    url: fullUrl,
+    method: options.method || "GET",
+    authToken: authHeaders.Authorization ? "✓ Present" : "✗ Missing",
+    tokenLength: token?.length || 0,
+  });
+  
+  const res = await fetch(fullUrl, fetchOptions);
+  
+  console.log("📊 Response Status:", res.status, res.statusText);
+  console.log("📊 Response Headers:", {
+    contentType: res.headers.get("content-type"),
+  });
+  
   if (res.status === 401) {
+    console.error("❌ 401 Unauthorized - Token rejected by backend");
+    console.error("Token in localStorage:", token ? "✓ Present, length: " + token.length : "✗ Missing");
     clearAuthAndRedirect();
     throw new Error("Session expired. Please log in again.");
   }
+  
   const text = await res.text();
   let data = {};
   try { if (text) data = JSON.parse(text); } catch { /* non-JSON */ }
-  if (!res.ok) throw new Error(data.message || data.error || "Request failed");
+  
+  if (!res.ok) {
+    const errorMessage = data.message || data.error || `HTTP ${res.status}: Request failed`;
+    console.error("❌ Request failed:", errorMessage);
+    throw new Error(errorMessage);
+  }
+  
   return data;
 }
 
@@ -32,6 +74,22 @@ export const getAllQuizzes = () => request("/api/quizzes");
 export const getMyQuizzes = () => request("/api/quizzes/mine");
 
 export const getQuizById = (id) => request(`/api/quizzes/${id}`);
+
+export const updateQuiz = (id, body) =>
+  request(`/api/quizzes/${id}`, { method: "PUT", body: JSON.stringify(body) });
+
+export const deleteQuiz = (id) =>
+  request(`/api/quizzes/${id}`, { method: "DELETE" });
+
+export const getUpcomingQuizzes = () => request("/api/quizzes/upcoming/all");
+
+export const getMyUpcomingQuizzes = () => request("/api/quizzes/upcoming/mine");
+
+export const getPastQuizzes = () => request("/api/quizzes/past/all");
+
+export const getMyPastQuizzes = () => request("/api/quizzes/past/mine");
+
+export const getExaminerStats = () => request("/api/quizzes/stats/mine");
 
 // ── Attempt APIs ───────────────────────────────────────────
 export const submitAttempt = (quizId, answers) =>

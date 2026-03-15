@@ -1,5 +1,6 @@
 // ExaminerResultsDashboard.jsx
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getMyQuizzes, getAttemptsForQuiz } from "../api/quizApi";
 
 const C = {
@@ -113,6 +114,7 @@ function QuizResultCard({ q }) {
 }
 
 export default function ExaminerResultDashboard() {
+  const [searchParams] = useSearchParams();
   const [quizzes,    setQuizzes]    = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [attempts,   setAttempts]   = useState([]);
@@ -123,9 +125,18 @@ export default function ExaminerResultDashboard() {
 
   useEffect(() => {
     getMyQuizzes()
-      .then(data => { setQuizzes(data); if (data.length > 0) setSelectedId(data[0].id); setLoadingQ(false); })
+      .then(data => {
+        setQuizzes(data);
+        const quizIdFromParam = searchParams.get("quizId");
+        if (quizIdFromParam) {
+          setSelectedId(Number(quizIdFromParam));
+        } else if (data.length > 0) {
+          setSelectedId(data[0].id);
+        }
+        setLoadingQ(false);
+      })
       .catch(e  => { setErrorQ(e.message); setLoadingQ(false); });
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedId) { setAttempts([]); return; }

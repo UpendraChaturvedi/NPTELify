@@ -111,7 +111,7 @@ export default function QuizPage() {
               style={{ padding:"12px", borderRadius:12, background:C.blue, color:"#fff", border:"none", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:C.font }}>
               View Solutions
             </button>
-            <button onClick={() => navigate("/candidate")}
+            <button onClick={() => navigate("/candidate/dashboard")}
               style={{ padding:"12px", borderRadius:12, background:C.altBg, color:C.navy, border:`1.5px solid ${C.border}`, fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:C.font }}>
               Back to Dashboard
             </button>
@@ -136,7 +136,7 @@ export default function QuizPage() {
           <div style={{ fontSize:24, marginBottom:12 }}>⚠️</div>
           <div style={{ fontSize:15, fontWeight:700, marginBottom:8 }}>Failed to load quiz</div>
           <div style={{ fontSize:13 }}>{error}</div>
-          <button onClick={() => navigate("/candidate")}
+          <button onClick={() => navigate("/candidate/dashboard")}
             style={{ marginTop:20, padding:"10px 24px", borderRadius:10, background:C.navy, color:"#fff", border:"none", fontWeight:700, cursor:"pointer", fontFamily:C.font }}>
             Go Back
           </button>

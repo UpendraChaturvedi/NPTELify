@@ -3,11 +3,14 @@ package com.backend.nptelify.service;
 import com.backend.nptelify.dto.AuthResponse;
 import com.backend.nptelify.dto.LoginRequest;
 import com.backend.nptelify.dto.RegisterRequest;
+import com.backend.nptelify.dto.ProfileUpdateRequest;
 import com.backend.nptelify.entity.Role;
 import com.backend.nptelify.entity.User;
 import com.backend.nptelify.repository.UserRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -53,5 +56,47 @@ public class AuthService {
         );
         User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         return new AuthResponse(jwtService.generateToken(user), user.getRole().name().toLowerCase(), user.getName());
+    }
+
+    public AuthResponse updateProfile(ProfileUpdateRequest request) {
+        // Get current authenticated user's email
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentEmail = authentication.getName();
+        
+        // Find user by current email
+        User user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        
+        // Check if new email is already taken (only if email is being changed)
+        if (!user.getEmail().equals(request.getEmail()) && 
+            userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already in use");
+        }
+        
+        // Update name
+        if (request.getName() != null && !request.getName().isEmpty()) {
+            user.setName(request.getName());
+        }
+        
+        // Update email
+        if (request.getEmail() != null && !request.getEmail().isEmpty()) {
+            user.setEmail(request.getEmail());
+        }
+        
+        // Update password if provided
+        if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        }
+        
+        userRepository.save(user);
+        
+        // Generate new token with updated user info
+        String token = jwtService.generateToken(user);
+        return new AuthResponse(token, user.getRole().name().toLowerCase(), user.getName());
     }
 }

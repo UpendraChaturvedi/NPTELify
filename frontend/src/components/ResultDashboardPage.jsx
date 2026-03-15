@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getMyAttempts } from "../api/quizApi";
 
 const C = {
@@ -66,15 +66,34 @@ function BarChartSVG({ bars }) {
 
 export default function ResultsDashboardPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const quizId = searchParams.get("quizId");
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date()); // For month navigation
 
   useEffect(() => {
     getMyAttempts()
-      .then(data => { setAttempts(data); setLoading(false); })
+      .then(data => {
+        // Filter by quizId if provided
+        const filtered = quizId ? data.filter(a => a.quizId === parseInt(quizId)) : data;
+        setAttempts(filtered);
+        setLoading(false);
+      })
       .catch(e => { setError(e.message); setLoading(false); });
-  }, []);
+  }, [quizId]);
+
+  // Month navigation handlers
+  const goToPreviousMonth = () => {
+    setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
+  };
+
+  const goToNextMonth = () => {
+    setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1));
+  };
+
+  const monthYearString = selectedMonth.toLocaleString("default", { month: "long", year: "numeric" });
 
   if (loading) return <div style={{ padding:40, textAlign:"center", color:C.muted }}>Loading results…</div>;
   if (error)   return <div style={{ padding:40, textAlign:"center", color:"#dc2626" }}>Error: {error}</div>;
@@ -104,22 +123,34 @@ export default function ResultsDashboardPage() {
     return { label: s, value: avg, color: PALETTE[i % PALETTE.length] };
   });
 
-  // Bar chart: last 6 months average score per month
-  const monthMap = {};
-  attempts.forEach(a => {
+  // Bar chart: attempts for selected month
+  const selectedMonthKey = selectedMonth.toLocaleString("default", { month: "short", year: "2-digit" });
+  const selectedMonthAttempts = attempts.filter(a => {
     const d = new Date(a.submittedAt);
-    const key = d.toLocaleString("default", { month:"short", year:"2-digit" });
-    if (!monthMap[key]) monthMap[key] = [];
-    monthMap[key].push(a.percentage);
+    const key = d.toLocaleString("default", { month: "short", year: "2-digit" });
+    return key === selectedMonthKey;
   });
-  const monthBars = Object.entries(monthMap)
-    .slice(-6)
-    .map(([label, vals]) => ({ label, score: Math.round(vals.reduce((s,v)=>s+v,0)/vals.length) }));
 
-  const sorted = [...attempts].sort((a,b) => b.percentage - a.percentage);
+  const sorted = [...selectedMonthAttempts].sort((a,b) => b.percentage - a.percentage);
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <h1 style={{ fontSize:28, fontWeight:900, color:C.navy, margin:0 }}>
+            {quizId && attempts.length > 0 ? `📋 ${attempts[0].quizTitle}` : "Results Dashboard"}
+          </h1>
+          <p style={{ fontSize:13, color:C.muted, margin:"4px 0 0 0" }}>
+            {quizId && attempts.length > 0 ? "Your detailed quiz result" : "Track your performance across all quizzes"}
+          </p>
+        </div>
+        {quizId && (
+          <button onClick={() => navigate(-1)} style={{ padding:"8px 16px", borderRadius:10, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font }}>
+            ← Back
+          </button>
+        )}
+      </div>
       {/* Summary */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14 }}>
         {[
@@ -144,53 +175,98 @@ export default function ResultsDashboardPage() {
           <DonutChart data={donutData} avgPct={avgScore}/>
         </div>
         <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"22px 24px" }}>
-          <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:18 }}>Monthly Score Trend</div>
-          {monthBars.length > 0 ? <BarChartSVG bars={monthBars}/> : <div style={{ color:C.muted, fontSize:13 }}>Not enough data yet</div>}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
+            <div style={{ fontSize:14, fontWeight:800, color:C.navy }}>📅 Monthly Attempts - {monthYearString}</div>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <button onClick={goToPreviousMonth} style={{ padding:"6px 12px", borderRadius:8, background:C.altBg, border:`1.5px solid ${C.border}`, color:C.navy, fontWeight:700, cursor:"pointer", fontSize:18, fontFamily:C.font }}>
+                ←
+              </button>
+              <span style={{ fontSize:12, fontWeight:700, color:C.muted, minWidth:80, textAlign:"center" }}>
+                {selectedMonthAttempts.length} attempt{selectedMonthAttempts.length !== 1 ? "s" : ""}
+              </span>
+              <button onClick={goToNextMonth} style={{ padding:"6px 12px", borderRadius:8, background:C.altBg, border:`1.5px solid ${C.border}`, color:C.navy, fontWeight:700, cursor:"pointer", fontSize:18, fontFamily:C.font }}>
+                →
+              </button>
+            </div>
+          </div>
+          {selectedMonthAttempts.length > 0 ? (
+            <div>
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:12, color:C.muted, marginBottom:6 }}>Attempts in {monthYearString}:</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {selectedMonthAttempts.map(a => {
+                    const pct = Math.round(a.percentage);
+                    const pass = pct >= 60;
+                    const date = new Date(a.submittedAt).toLocaleDateString("en-GB", { day:"2-digit", month:"short" });
+                    return (
+                      <div key={a.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:8, background:C.bg }}>
+                        <span style={{ fontSize:11, fontWeight:700, color:C.muted, minWidth:50 }}>{date}</span>
+                        <div style={{ flex:1, height:5, borderRadius:999, background:C.border, overflow:"hidden" }}>
+                          <div style={{ width:`${pct}%`, height:"100%", borderRadius:999, background:pass?"#16a34a":"#dc2626" }}/>
+                        </div>
+                        <span style={{ fontSize:11, fontWeight:700, color:pass?"#16a34a":"#dc2626", minWidth:50, textAlign:"right" }}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ color:C.muted, fontSize:13 }}>No attempts in {monthYearString}</div>
+          )}
         </div>
       </div>
       {/* Table */}
       <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, overflow:"hidden" }}>
-        <div style={{ padding:"16px 20px", borderBottom:`1.5px solid ${C.border}`, fontSize:14, fontWeight:800, color:C.navy }}>All Results</div>
+        <div style={{ padding:"16px 20px", borderBottom:`1.5px solid ${C.border}`, fontSize:14, fontWeight:800, color:C.navy }}>
+          📋 Results from {monthYearString} {selectedMonthAttempts.length > 0 ? `(${selectedMonthAttempts.length})` : "(No data)"}
+        </div>
         <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <tr style={{ background:C.altBg }}>
-                {["Quiz","Subject","Score","Status","Date",""].map(h=>(
-                  <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontSize:12, fontWeight:700, color:C.muted }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r,i)=>{
-                const pct=Math.round(r.percentage), pass=pct>=60;
-                const date=new Date(r.submittedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
-                return (
-                  <tr key={r.id} style={{ borderBottom:`1px solid ${C.border}`, background:i%2===0?C.card:C.bg }}>
-                    <td style={{ padding:"11px 14px", fontSize:13, color:C.navy, fontWeight:600 }}>{r.quizTitle}</td>
-                    <td style={{ padding:"11px 14px", fontSize:12, color:C.body }}>{r.subject}</td>
-                    <td style={{ padding:"11px 14px" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <div style={{ width:70, height:6, borderRadius:999, background:C.border, overflow:"hidden" }}>
-                          <div style={{ width:`${pct}%`, height:"100%", borderRadius:999, background:pass?"#16a34a":"#dc2626" }}/>
+          {sorted.length === 0 ? (
+            <div style={{ padding:"20px", textAlign:"center", color:C.muted, fontSize:13 }}>
+              No attempts in {monthYearString}. Try selecting a different month!
+            </div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead>
+                <tr style={{ background:C.altBg }}>
+                  {["Quiz","Subject","Score","Status","Date",""].map(h=>(
+                    <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontSize:12, fontWeight:700, color:C.muted }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((r,i)=>{
+                  const pct=Math.round(r.percentage), pass=pct>=60;
+                  const date=new Date(r.submittedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+                  return (
+                    <tr key={r.id} style={{ borderBottom:`1px solid ${C.border}`, background:i%2===0?C.card:C.bg }}>
+                      <td style={{ padding:"11px 14px", fontSize:13, color:C.navy, fontWeight:600 }}>{r.quizTitle}</td>
+                      <td style={{ padding:"11px 14px", fontSize:12, color:C.body }}>{r.subject}</td>
+                      <td style={{ padding:"11px 14px" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <div style={{ width:70, height:6, borderRadius:999, background:C.border, overflow:"hidden" }}>
+                            <div style={{ width:`${pct}%`, height:"100%", borderRadius:999, background:pass?"#16a34a":"#dc2626" }}/>
+                          </div>
+                          <span style={{ fontSize:12, fontWeight:700, color:pass?"#16a34a":"#dc2626" }}>{r.score}/{r.totalQuestions} · {pct}%</span>
                         </div>
-                        <span style={{ fontSize:12, fontWeight:700, color:pass?"#16a34a":"#dc2626" }}>{r.score}/{r.totalQuestions} · {pct}%</span>
-                      </div>
-                    </td>
-                    <td style={{ padding:"11px 14px" }}>
-                      <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, background:pass?"#f0fdf4":"#fef2f2", color:pass?"#16a34a":"#dc2626" }}>{pass?"Pass":"Fail"}</span>
-                    </td>
-                    <td style={{ padding:"11px 14px", fontSize:12, color:C.muted }}>{date}</td>
-                    <td style={{ padding:"11px 14px" }}>
-                      <button
-                        onClick={() => navigate("/candidate/solutions", { state:{ attemptId: r.id } })}
-                        style={{ fontSize:11, fontWeight:700, color:C.blue, background:"none", border:`1px solid ${C.blue}`, borderRadius:8, padding:"4px 10px", cursor:"pointer" }}
-                      >Review</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td style={{ padding:"11px 14px" }}>
+                        <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, background:pass?"#f0fdf4":"#fef2f2", color:pass?"#16a34a":"#dc2626" }}>{pass?"Pass":"Fail"}</span>
+                      </td>
+                      <td style={{ padding:"11px 14px", fontSize:12, color:C.muted }}>{date}</td>
+                      <td style={{ padding:"11px 14px" }}>
+                        <button
+                          onClick={() => navigate("/candidate/solutions", { state:{ attemptId: r.id } })}
+                          style={{ fontSize:11, fontWeight:700, color:C.blue, background:"none", border:`1px solid ${C.blue}`, borderRadius:8, padding:"4px 10px", cursor:"pointer" }}
+                        >Review</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

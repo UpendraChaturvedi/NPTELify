@@ -1,7 +1,17 @@
 // ExaminerMainDashboard.jsx
 import { useState, useEffect } from "react";
-import { getMyQuizzes } from "../api/quizApi";
+import { getMyQuizzes, deleteQuiz } from "../api/quizApi";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { notificationStore } from "../utils/notificationStore";
+
+// CSS for pulse animation
+const pulseStyle = `
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+`;
 
 const C = {
   navy:"#1a3a6b",blue:"#2563eb",orange:"#f97316",green:"#16a34a",red:"#dc2626",purple:"#7c3aed",
@@ -42,24 +52,112 @@ function StatCard({ icon, label, value, color }) {
   );
 }
 
-function QuizCard({ quiz }) {
+function QuizCard({ quiz, onRefresh, quizType = "upcoming" }) {
+  const navigate = useNavigate();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  
   const durationLabel = `${quiz.durationMinutes} min`;
   const qCount = quiz.questions?.length || 0;
-  const date = quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" }) : "—";
+  
+  // Format scheduled date/time for display
+  let dateStr = "—";
+  let timeStr = "";
+  if (quiz.scheduledDateTime) {
+    const scheduled = new Date(quiz.scheduledDateTime);
+    dateStr = scheduled.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+    timeStr = scheduled.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
+  }
+  
+  const attemptCount = quiz.attemptCount || 0;
+  
+  const handleEdit = () => {
+    navigate(`/examiner/create?editId=${quiz.id}`);
+  };
+  
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      await deleteQuiz(quiz.id);
+      setShowDeleteConfirm(false);
+      if (onRefresh) onRefresh();
+      setDeleting(false);
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete quiz: " + (error.message || "Unknown error"));
+      setShowDeleteConfirm(false);
+      setDeleting(false);
+    }
+  };
+  
+  const handleReview = () => {
+    navigate(`/examiner/results?quizId=${quiz.id}`);
+  };
+  
   return (
-    <div style={{ padding:"13px 14px",borderRadius:12,border:`1.5px solid ${C.border}`,background:C.bg }}>
-      <div style={{ display:"flex",justifyContent:"space-between",gap:8,marginBottom:7 }}>
-        <div style={{ fontSize:13,fontWeight:700,color:C.navy,lineHeight:1.35 }}>{quiz.title}</div>
-        <span style={{ padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:"#fff3ee",color:C.orange,whiteSpace:"nowrap",flexShrink:0 }}>{durationLabel}</span>
-      </div>
-      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6 }}>
-        <Badge subject={quiz.subject} />
-        <div style={{ display:"flex",alignItems:"center",gap:12 }}>
-          <span style={{ fontSize:11,color:C.muted }}>{date}</span>
-          <span style={{ fontSize:11,fontWeight:700,color:C.blue }}>📝 {qCount} Qs</span>
+    <>
+      <div style={{ padding:"13px 14px",borderRadius:12,border:`1.5px solid ${C.border}`,background:C.bg }}>
+        <div style={{ display:"flex",justifyContent:"space-between",gap:8,marginBottom:7 }}>
+          <div style={{ fontSize:13,fontWeight:700,color:C.navy,lineHeight:1.35 }}>{quiz.title}</div>
+          <span style={{ padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:"#fff3ee",color:C.orange,whiteSpace:"nowrap",flexShrink:0 }}>{durationLabel}</span>
+        </div>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:10 }}>
+          <Badge subject={quiz.subject} />
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1 }}>
+            <span style={{ fontSize:11,fontWeight:600,color:C.blue }}>{dateStr}</span>
+            <span style={{ fontSize:10,color:C.muted }}>⏰ {timeStr}</span>
+          </div>
+        </div>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,paddingBottom:10,borderBottom:`1px solid ${C.border}`,marginBottom:10 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:4 }}>
+              <span style={{ fontSize:12,fontWeight:700,color:C.purple }}>👥 {attemptCount}</span>
+              <span style={{ fontSize:10,color:C.muted }}>attempt{attemptCount !== 1 ? "s" : ""}</span>
+            </div>
+            <span style={{ fontSize:11,fontWeight:700,color:C.blue }}>📝 {qCount} Qs</span>
+          </div>
+        </div>
+        <div style={{ display:"flex",gap:8,justifyContent:"flex-end" }}>
+          {quizType === "upcoming" && (
+            <>
+              <button onClick={handleEdit} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s" }}>
+                ✎ Edit
+              </button>
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.red,background:"transparent",color:C.red,cursor:"pointer",transition:"all 0.2s" }}>
+                🗑 Delete
+              </button>
+            </>
+          )}
+          {quizType === "past" && (
+            <button onClick={handleReview} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s" }}>
+              📊 Review
+            </button>
+          )}
+          {quizType === "live" && (
+            <div style={{ fontSize:12,color:C.muted,fontStyle:"italic" }}>Quiz in progress</div>
+          )}
         </div>
       </div>
-    </div>
+      
+      {showDeleteConfirm && (
+        <div style={{ position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000 }}>
+          <div style={{ background:C.card,borderRadius:16,padding:"24px",maxWidth:400,boxShadow:"0 10px 40px rgba(0,0,0,0.1)" }}>
+            <div style={{ fontSize:16,fontWeight:700,color:C.navy,marginBottom:8 }}>Delete Quiz?</div>
+            <div style={{ fontSize:14,color:C.body,marginBottom:20 }}>
+              Are you sure you want to delete "{quiz.title}"? This action cannot be undone.
+            </div>
+            <div style={{ display:"flex",gap:12,justifyContent:"flex-end" }}>
+              <button onClick={() => setShowDeleteConfirm(false)} disabled={deleting} style={{ padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,border:`1.5px solid ${C.border}`,background:C.bg,color:C.navy,cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting} style={{ padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,border:`1.5px solid ${C.red}`,background:C.red,color:"white",cursor:"pointer",opacity:deleting?0.7:1 }}>
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -81,24 +179,72 @@ function ErrorState({ message }) {
 
 export default function ExaminerMainDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState(null);
 
-  useEffect(() => {
+  const loadQuizzes = () => {
     getMyQuizzes()
-      .then(data => { setQuizzes(data); setLoading(false); })
+      .then(data => {
+        setQuizzes(data);
+        setLoading(false);
+
+        // Check for quizzes that are live or have just ended and trigger notifications
+        const now = new Date();
+        data.forEach(quiz => {
+          if (quiz.scheduledDateTime) {
+            const scheduled = new Date(quiz.scheduledDateTime);
+            const endTime = new Date(scheduled.getTime() + quiz.durationMinutes * 60 * 1000);
+            const timeUntilStart = scheduled.getTime() - now.getTime();
+            const timeUntilEnd = endTime.getTime() - now.getTime();
+            const oneHour = 60 * 60 * 1000;
+
+            // Notify if quiz just started (within first 5 minutes)
+            if (scheduled <= now && now < endTime && timeUntilStart > -5 * 60 * 1000) {
+              notificationStore.notifyQuizStartedExaminer(quiz.title);
+            }
+            // Notify if quiz is ending within the hour
+            else if (timeUntilEnd <= oneHour && timeUntilEnd > 0) {
+              // Notify at different thresholds can be added here
+            }
+          }
+        });
+      })
       .catch(e  => { setError(e.message); setLoading(false); });
+  };
+
+  useEffect(() => {
+    loadQuizzes();
   }, []);
 
   const totalQuestions = quizzes.reduce((a, q) => a + (q.questions?.length || 0), 0);
-  // Split: recent (last 30 days) vs older
-  const now = Date.now();
-  const recent = quizzes.filter(q => q.createdAt && (now - new Date(q.createdAt).getTime()) < 30*24*60*60*1000);
-  const older  = quizzes.filter(q => !q.createdAt || (now - new Date(q.createdAt).getTime()) >= 30*24*60*60*1000);
+  
+  // Categorize quizzes by scheduledDateTime and duration
+  const now = new Date();
+  const past = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    const endTime = new Date(scheduled.getTime() + q.durationMinutes * 60 * 1000);
+    return now >= endTime; // Quiz has ended
+  });
+  
+  const live = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    const endTime = new Date(scheduled.getTime() + q.durationMinutes * 60 * 1000);
+    return scheduled <= now && now < endTime; // Quiz is currently active
+  });
+  
+  const upcoming = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    return scheduled > now; // Quiz hasn't started yet
+  });
 
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:20,fontFamily:C.font }}>
+      <style>{pulseStyle}</style>
 
       {/* Hero Banner */}
       <div style={{ borderRadius:18,padding:"24px 32px",background:C.navy,position:"relative",overflow:"hidden" }}>
@@ -118,39 +264,54 @@ export default function ExaminerMainDashboard() {
       <div style={{ display:"flex",gap:14,flexWrap:"wrap" }}>
         <StatCard icon="📋" label="Total Quizzes Created"  value={quizzes.length} color={C.blue} />
         <StatCard icon="📝" label="Total Questions"        value={totalQuestions}  color={C.purple} />
-        <StatCard icon="🗓️" label="Created This Month"    value={recent.length}   color={C.green} />
-        <StatCard icon="📂" label="Older Quizzes"          value={older.length}    color={C.orange} />
+        <StatCard icon="⏳" label="Upcoming Quizzes"       value={upcoming.length}  color={C.green} />
+        <StatCard icon="🔴" label="Past Quizzes"           value={past.length}     color={C.orange} />
       </div>
 
-      {/* Two-column */}
-      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
+      {/* Three-column */}
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:18 }}>
 
-        {/* Recent */}
+        {/* Upcoming */}
         <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
-            <span style={{ width:8,height:8,borderRadius:"50%",background:C.orange,display:"inline-block" }}/>
-            Recent Quizzes (30 days)
+            <span style={{ width:8,height:8,borderRadius:"50%",background:C.green,display:"inline-block" }}/>
+            ⏳ Upcoming Quizzes
           </div>
-          {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : recent.length === 0 ? (
-            <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No quizzes created in the last 30 days.</div>
+          {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : upcoming.length === 0 ? (
+            <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
           ) : (
-            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-              {recent.map(q => <QuizCard key={q.id} quiz={q}/>)}
+            <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
+              {upcoming.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="upcoming"/>)}
             </div>
           )}
         </div>
 
-        {/* Older */}
+        {/* Live */}
         <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
-            <span style={{ width:8,height:8,borderRadius:"50%",background:C.blue,display:"inline-block" }}/>
-            All Other Quizzes
+            <span style={{ width:8,height:8,borderRadius:"50%",background:"#dc2626",display:"inline-block",animation:"pulse 1s infinite" }}/>
+            🔴 Live Quizzes
           </div>
-          {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : older.length === 0 ? (
-            <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No older quizzes found.</div>
+          {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : live.length === 0 ? (
+            <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No live quizzes at the moment.</div>
           ) : (
             <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
-              {older.map(q => <QuizCard key={q.id} quiz={q}/>)}
+              {live.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="live"/>)}
+            </div>
+          )}
+        </div>
+
+        {/* Past */}
+        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
+          <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
+            <span style={{ width:8,height:8,borderRadius:"50%",background:C.orange,display:"inline-block" }}/>
+            🔙 Past Quizzes
+          </div>
+          {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : past.length === 0 ? (
+            <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No past quizzes yet.</div>
+          ) : (
+            <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
+              {past.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="past"/>)}
             </div>
           )}
         </div>

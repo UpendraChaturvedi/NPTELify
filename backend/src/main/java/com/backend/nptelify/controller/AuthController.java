@@ -3,6 +3,7 @@ package com.backend.nptelify.controller;
 import com.backend.nptelify.dto.AuthResponse;
 import com.backend.nptelify.dto.LoginRequest;
 import com.backend.nptelify.dto.RegisterRequest;
+import com.backend.nptelify.dto.ProfileUpdateRequest;
 import com.backend.nptelify.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,5 +27,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/update-profile")
+    public ResponseEntity<AuthResponse> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
+        return ResponseEntity.ok(authService.updateProfile(request));
     }
 }

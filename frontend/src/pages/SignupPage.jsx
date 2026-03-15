@@ -313,7 +313,7 @@ export default function SignupPage() {
     try {
       const data = await registerApi(form.name, form.email, form.password, form.role);
       auth.login(data);
-      navigate(data.role === "examiner" ? "/examiner" : "/candidate");
+      navigate(data.role === "examiner" ? "/examiner" : "/candidate/dashboard");
     } catch (error) {
       setErr(error.message || "Registration failed");
     } finally {

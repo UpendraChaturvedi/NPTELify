@@ -6,7 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.lang.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,6 +20,7 @@ import java.io.IOException;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
 
@@ -28,12 +30,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        String method = request.getMethod();
+        String path = request.getRequestURI();
+        
+        logger.info("🔍 JwtAuthFilter: {} {}", method, path);
+        
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.warn("⚠️  No Bearer token found. Authorization header: {}", authHeader);
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,7 +50,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String username;
         try {
             username = jwtService.extractUsername(jwt);
+            logger.info("✓ Token valid for user: {}", username);
         } catch (Exception e) {
+            logger.error("❌ Token validation failed: {}", e.getMessage());
             filterChain.doFilter(request, response);
             return;
         }
@@ -54,6 +64,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                logger.info("✓ Authentication set for user: {}", username);
+            } else {
+                logger.warn("⚠️  Token invalid for user: {}", username);
             }
         }
         filterChain.doFilter(request, response);

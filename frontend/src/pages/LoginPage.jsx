@@ -189,7 +189,7 @@ export default function LoginPage() {
     try {
       const data = await loginApi(form.email, form.password);
       auth.login(data);
-      navigate(data.role === "examiner" ? "/examiner" : "/candidate");
+      navigate(data.role === "examiner" ? "/examiner" : "/candidate/dashboard");
     } catch (error) {
       setErr(error.message || "Invalid email or password");
     } finally {

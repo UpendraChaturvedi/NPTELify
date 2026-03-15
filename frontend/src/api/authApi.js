@@ -1,4 +1,4 @@
-const BASE_URL = "/api/auth";
+const BASE_URL = "http://localhost:8080/api/auth";
 
 async function parseResponse(res, fallbackMessage) {
   const text = await res.text();
@@ -29,3 +29,17 @@ export async function registerApi(name, email, password, role) {
   });
   return parseResponse(res, "Registration failed");
 }
+
+export async function updateProfileApi(name, email, currentPassword, newPassword) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${BASE_URL}/update-profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, email, currentPassword, newPassword }),
+  });
+  return parseResponse(res, "Profile update failed");
+}
+

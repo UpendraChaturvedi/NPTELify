@@ -1,6 +1,7 @@
 // ExaminerCreateQuiz.jsx — Google-Forms-style quiz builder
-import { useState } from "react";
-import { createQuiz } from "../api/quizApi";
+import { useState, useEffect } from "react";
+import { createQuiz, updateQuiz, getQuizById } from "../api/quizApi";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 const C = {
   navy:"#1a3a6b",blue:"#2563eb",orange:"#f97316",green:"#16a34a",red:"#dc2626",purple:"#7c3aed",
@@ -241,12 +242,17 @@ const defaultQuestion = () => ({
 
 
 export default function ExaminerCreateQuizDashboard() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const editId = searchParams.get("editId");
+  
   const [meta, setMeta]           = useState({ title:"", subject:"", description:"", date:"", time:"", duration:"30", totalMarks:"" });
   const [questions, setQuestions] = useState([defaultQuestion()]);
   const [submitted, setSubmitted] = useState(false);
   const [hov, setHov]             = useState(null);
   const [loading, setLoading]     = useState(false);
   const [err, setErr]             = useState(null);
+  const [editLoading, setEditLoading] = useState(editId ? true : false);
 
   const setM = (field,val) => setMeta(p => ({ ...p,[field]:val }));
 
@@ -255,9 +261,49 @@ export default function ExaminerCreateQuizDashboard() {
   const dupQ    = i => { const qs=[...questions]; qs.splice(i+1,0,{...questions[i],id:Date.now()}); setQuestions(qs); };
   const addQ    = () => setQuestions([...questions,defaultQuestion()]);
 
+  // Load quiz data if in edit mode
+  useEffect(() => {
+    if (editId) {
+      getQuizById(editId)
+        .then(quiz => {
+          setMeta({
+            title: quiz.title,
+            subject: quiz.subject,
+            description: "",
+            date: quiz.scheduledDateTime ? quiz.scheduledDateTime.split('T')[0] : "",
+            time: quiz.scheduledDateTime ? quiz.scheduledDateTime.split('T')[1].substring(0, 5) : "",
+            duration: quiz.durationMinutes.toString(),
+            totalMarks: ""
+          });
+          
+          const loadedQuestions = quiz.questions.map((q, idx) => ({
+            id: q.id || Date.now() + idx,
+            text: q.text,
+            type: "mcq",
+            marks: "1",
+            required: true,
+            options: q.options || [],
+            correctAnswer: null
+          }));
+          setQuestions(loadedQuestions.length > 0 ? loadedQuestions : [defaultQuestion()]);
+          setEditLoading(false);
+        })
+        .catch(e => {
+          setErr("Failed to load quiz: " + e.message);
+          setEditLoading(false);
+        });
+    }
+  }, [editId]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr(null);
+
+    // Validate date and time
+    if (!meta.date || !meta.time) {
+      setErr("Please set both date and time for the quiz.");
+      return;
+    }
 
     // Only MCQ + TF are supported by the backend
     const submittable = questions.filter(q => q.type === "mcq" || q.type === "truefalse");
@@ -281,10 +327,14 @@ export default function ExaminerCreateQuizDashboard() {
       }
     }
 
+    // Combine date and time into ISO datetime string
+    const scheduledDateTime = `${meta.date}T${meta.time}:00`;
+
     const payload = {
       title:           meta.title,
       subject:         meta.subject,
       durationMinutes: parseInt(meta.duration) || 30,
+      scheduledDateTime: scheduledDateTime,
       questions: submittable.map(q => ({
         text:          q.text,
         options:       q.type === "truefalse" ? ["True","False"] : q.options.filter(o => o.trim()),
@@ -294,30 +344,46 @@ export default function ExaminerCreateQuizDashboard() {
 
     setLoading(true);
     try {
-      await createQuiz(payload);
-      setSubmitted({ title: meta.title, skipped });
+      if (editId) {
+        await updateQuiz(editId, payload);
+        setSubmitted({ title: meta.title, skipped, isEdit: true });
+      } else {
+        await createQuiz(payload);
+        setSubmitted({ title: meta.title, skipped, isEdit: false });
+      }
     } catch (e) {
-      setErr(e.message || "Failed to publish quiz. Please try again.");
+      setErr(e.message || "Failed to save quiz. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (editLoading) {
+    return (
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh",fontFamily:C.font }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:16,color:C.body, marginBottom:8 }}>Loading quiz...</div>
+          <div style={{ width:40,height:40,borderRadius:"50%",border:`3px solid ${C.border}`,borderTop:`3px solid ${C.blue}`,margin:"0 auto",animation:"spin 1s linear infinite" }}/>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
       <div style={{ display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh",fontFamily:C.font }}>
         <div style={{ background:C.card,borderRadius:20,padding:"48px 40px",textAlign:"center",border:`1.5px solid ${C.border}`,maxWidth:480 }}>
           <div style={{ width:64,height:64,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px",fontSize:28 }}>✅</div>
-          <h2 style={{ margin:"0 0 8px",fontSize:22,fontWeight:900,color:C.navy }}>Quiz Published!</h2>
-          <p style={{ margin:"0 0 8px",fontSize:14,color:C.muted }}>"{submitted.title}" has been published successfully.</p>
+          <h2 style={{ margin:"0 0 8px",fontSize:22,fontWeight:900,color:C.navy }}>{submitted.isEdit ? "Quiz Updated!" : "Quiz Published!"}</h2>
+          <p style={{ margin:"0 0 8px",fontSize:14,color:C.muted }}>"{submitted.title}" has been {submitted.isEdit ? "updated" : "published"} successfully.</p>
           {submitted.skipped > 0 && (
             <p style={{ margin:"0 0 24px",fontSize:12,color:C.orange }}>
               Note: {submitted.skipped} MSQ/Short Answer question{submitted.skipped>1?"s were":" was"} skipped (not yet supported).
             </p>
           )}
-          <button onClick={()=>{ setSubmitted(false); setMeta({ title:"",subject:"",description:"",date:"",time:"",duration:"30",totalMarks:"" }); setQuestions([defaultQuestion()]); }}
+          <button onClick={()=> { navigate("/examiner/dashboard"); }}
             style={{ padding:"12px 28px",borderRadius:12,background:C.blue,color:"#fff",border:"none",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:C.font }}>
-            Create Another Quiz
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -331,7 +397,7 @@ export default function ExaminerCreateQuizDashboard() {
       <div style={{ background:C.navy,borderRadius:18,padding:"20px 26px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
         <div>
           <div style={{ fontSize:11,color:"#a8c0e0",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4 }}>Quiz Builder</div>
-          <div style={{ fontSize:18,fontWeight:900,color:"#fff" }}>Create New Quiz</div>
+          <div style={{ fontSize:18,fontWeight:900,color:"#fff" }}>{editId ? "Edit Quiz" : "Create New Quiz"}</div>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
           <span style={{ fontSize:12,color:"#a8c0e0" }}>{questions.length} question{questions.length!==1?"s":""}</span>
@@ -397,12 +463,12 @@ export default function ExaminerCreateQuizDashboard() {
           {loading ? (
             <>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:15,height:15,animation:"spin 1s linear infinite" }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-              Publishing…
+              {editId ? "Updating…" : "Publishing…"}
             </>
           ) : (
             <>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:15,height:15 }}><path d="M5 13l4 4L19 7"/></svg>
-              Publish Quiz
+              {editId ? "Update Quiz" : "Publish Quiz"}
             </>
           )}
         </button>

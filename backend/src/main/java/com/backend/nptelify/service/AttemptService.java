@@ -13,6 +13,7 @@ import com.backend.nptelify.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,6 +39,19 @@ public class AttemptService {
                 .orElseThrow(() -> new IllegalArgumentException("Candidate not found"));
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new IllegalArgumentException("Quiz not found"));
+
+        // Check if quiz is live (scheduled and within time window)
+        LocalDateTime now = LocalDateTime.now();
+        if (quiz.getScheduledDateTime() == null) {
+            throw new IllegalArgumentException("This quiz is not scheduled yet");
+        }
+        if (now.isBefore(quiz.getScheduledDateTime())) {
+            throw new IllegalArgumentException("This quiz has not started yet. It is scheduled for " + quiz.getScheduledDateTime());
+        }
+        LocalDateTime quizEndTime = quiz.getScheduledDateTime().plusMinutes(quiz.getDurationMinutes());
+        if (now.isAfter(quizEndTime)) {
+            throw new IllegalArgumentException("This quiz has ended. It was scheduled to end at " + quizEndTime);
+        }
 
         // Prevent duplicate attempts
         attemptRepository.findByCandidateAndQuiz(candidate, quiz).ifPresent(a -> {

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class QuizRequest {
@@ -18,6 +19,8 @@ public class QuizRequest {
 
     @Min(1)
     private int durationMinutes;
+
+    private LocalDateTime scheduledDateTime;
 
     @NotEmpty
     @Valid
@@ -32,6 +35,9 @@ public class QuizRequest {
 
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int durationMinutes) { this.durationMinutes = durationMinutes; }
+
+    public LocalDateTime getScheduledDateTime() { return scheduledDateTime; }
+    public void setScheduledDateTime(LocalDateTime scheduledDateTime) { this.scheduledDateTime = scheduledDateTime; }
 
     public List<QuestionDto> getQuestions() { return questions; }
     public void setQuestions(List<QuestionDto> questions) { this.questions = questions; }

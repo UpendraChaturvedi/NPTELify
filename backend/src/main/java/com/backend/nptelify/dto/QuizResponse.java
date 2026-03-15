@@ -11,18 +11,23 @@ public class QuizResponse {
     private String subject;
     private int durationMinutes;
     private LocalDateTime createdAt;
+    private LocalDateTime scheduledDateTime;
     private String examinerName;
     private List<QuestionDto> questions;
+    private int attemptCount;
 
     public QuizResponse(Long id, String title, String subject, int durationMinutes,
-                        LocalDateTime createdAt, String examinerName, List<QuestionDto> questions) {
+                        LocalDateTime createdAt, LocalDateTime scheduledDateTime, String examinerName, List<QuestionDto> questions,
+                        int attemptCount) {
         this.id = id;
         this.title = title;
         this.subject = subject;
         this.durationMinutes = durationMinutes;
         this.createdAt = createdAt;
+        this.scheduledDateTime = scheduledDateTime;
         this.examinerName = examinerName;
         this.questions = questions;
+        this.attemptCount = attemptCount;
     }
 
     public Long getId() { return id; }
@@ -30,8 +35,10 @@ public class QuizResponse {
     public String getSubject() { return subject; }
     public int getDurationMinutes() { return durationMinutes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getScheduledDateTime() { return scheduledDateTime; }
     public String getExaminerName() { return examinerName; }
     public List<QuestionDto> getQuestions() { return questions; }
+    public int getAttemptCount() { return attemptCount; }
 
     public static class QuestionDto {
         private Long id;

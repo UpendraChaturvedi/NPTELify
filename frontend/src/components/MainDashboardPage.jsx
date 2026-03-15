@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllQuizzes, getMyAttempts } from "../api/quizApi";
 import { useAuth } from "../context/AuthContext";
+import { notificationStore } from "../utils/notificationStore";
 
 const C = {
   navy: "#1a3a6b", blue: "#2563eb", orange: "#f97316",
@@ -9,6 +10,45 @@ const C = {
   border: "#dce8fb", muted: "#7a8faf", body: "#4a6490",
   font: "'DM Sans', 'Segoe UI', sans-serif",
 };
+
+function CountdownTimer({ scheduledDateTime }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const scheduled = new Date(scheduledDateTime);
+      const now = new Date();
+      const diff = scheduled.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeLeft("Starting now! 🔴");
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h`);
+      } else if (hours > 0) {
+        setTimeLeft(`${hours}h ${mins}m`);
+      } else if (mins > 0) {
+        setTimeLeft(`${mins}m ${secs}s`);
+      } else {
+        setTimeLeft(`${secs}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [scheduledDateTime]);
+
+  return <span style={{ fontSize: 12, fontWeight: 700, color: "#f97316" }}>⏱️ {timeLeft}</span>;
+}
+
 function subjectColor(subject) {
   const palette = [
     { bg:"#eaf0fb", color:"#2563eb" },
@@ -35,13 +75,63 @@ export default function MainDashboardPage() {
 
   useEffect(() => {
     Promise.all([getAllQuizzes(), getMyAttempts()])
-      .then(([qs, ats]) => { setQuizzes(qs); setAttempts(ats); setLoading(false); })
+      .then(([qs, ats]) => {
+        setQuizzes(qs);
+        setAttempts(ats);
+        setLoading(false);
+
+        // Check for quizzes starting soon and trigger notifications
+        const now = new Date();
+        qs.forEach(quiz => {
+          if (quiz.scheduledDateTime) {
+            const scheduled = new Date(quiz.scheduledDateTime);
+            const endTime = new Date(scheduled.getTime() + quiz.durationMinutes * 60 * 1000);
+            const timeUntilStart = scheduled.getTime() - now.getTime();
+            const timeUntilEnd = endTime.getTime() - now.getTime();
+            const oneHour = 60 * 60 * 1000;
+            const hasAttempted = ats.some(a => a.quizId === quiz.id);
+
+            // Notify if quiz is live
+            if (scheduled <= now && now < endTime && !hasAttempted) {
+              notificationStore.notifyQuizLive(quiz.title);
+            }
+            // Notify if quiz is starting within 1 hour
+            else if (timeUntilStart <= oneHour && timeUntilStart > 0) {
+              notificationStore.notifyQuizStartingSoon(quiz.title);
+            }
+          }
+        });
+      })
       .catch(e => { setError(e.message); setLoading(false); });
   }, []);
 
   const attemptedIds = new Set(attempts.map(a => a.quizId));
-  const available    = quizzes.filter(q => !attemptedIds.has(q.id));
-  const completed    = quizzes.filter(q => attemptedIds.has(q.id));
+  
+  // Categorize quizzes by live status
+  const now = new Date();
+  const liveQuizzes = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    const endTime = new Date(scheduled.getTime() + q.durationMinutes * 60 * 1000);
+    return scheduled <= now && now < endTime;
+  });
+  
+  const upcomingQuizzes = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    return scheduled > now;
+  });
+  
+  const pastQuizzes = quizzes.filter(q => {
+    if (!q.scheduledDateTime) return false;
+    const scheduled = new Date(q.scheduledDateTime);
+    const endTime = new Date(scheduled.getTime() + q.durationMinutes * 60 * 1000);
+    return now >= endTime;
+  });
+  
+  // Available = live quizzes not yet attempted
+  const available = liveQuizzes.filter(q => !attemptedIds.has(q.id));
+  const completed = quizzes.filter(q => attemptedIds.has(q.id));
 
   const totalPassed  = attempts.filter(a => a.percentage >= 60).length;
   const avgScore     = attempts.length > 0
@@ -57,7 +147,7 @@ export default function MainDashboardPage() {
         <div style={{ position:"relative" }}>
           <div style={{ fontSize:22, fontWeight:900, color:"#fff", marginBottom:4 }}>Hey {user?.name || "Candidate"}! 👋</div>
           <div style={{ fontSize:14, color:"#a8c0e0" }}>
-            You have <span style={{ color:C.orange, fontWeight:700 }}>{available.length} quiz{available.length !== 1 ? "zes" : ""} available</span> to attempt.
+            You have <span style={{ color:C.orange, fontWeight:700 }}>{available.length} quiz{available.length !== 1 ? "zes" : ""} available to attempt right now</span> (live quizzes only).
           </div>
         </div>
       </div>
@@ -67,8 +157,8 @@ export default function MainDashboardPage() {
         {[
           { icon:"📝", label:"Total Quizzes",  value:quizzes.length,        color:C.blue },
           { icon:"✅", label:"Completed",      value:completed.length,      color:"#16a34a" },
-          { icon:"⏳", label:"Available",      value:available.length,      color:C.orange },
-          { icon:"🎯", label:"Avg Score",      value:attempts.length ? `${avgScore}%` : "—", color:C.navy },
+          { icon:"🔴", label:"Live Now",      value:available.length,      color:"#dc2626" },
+          { icon:"⏳", label:"Upcoming",       value:upcomingQuizzes.length, color:C.orange },
         ].map(s => (
           <div key={s.label} style={{ background:C.card, borderRadius:16, padding:"16px 20px", border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:14, flex:1, minWidth:0 }}>
             <div style={{ width:42, height:42, borderRadius:12, background:`${s.color}12`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{s.icon}</div>
@@ -85,32 +175,78 @@ export default function MainDashboardPage() {
       ) : error ? (
         <div style={{ padding:"16px", borderRadius:12, background:"#fef2f2", border:"1px solid #fca5a5", color:"#991b1b", fontSize:13 }}>{error}</div>
       ) : (
-        /* Two columns */
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
-          {/* Available */}
+        /* Three columns */
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:18 }}>
+          {/* Live Quizzes */}
           <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:C.orange, display:"inline-block" }}/>Available Quizzes
+              <span style={{ width:8, height:8, borderRadius:"50%", background:"#dc2626", display:"inline-block" }}/>🔴 Live Now
             </div>
             {available.length === 0 ? (
-              <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No new quizzes available.</div>
+              <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No live quizzes available right now.</div>
             ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {available.map(q => (
+              <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+                {available.map(q => {
+                  const qDate = new Date(q.scheduledDateTime);
+                  const dateStr = qDate.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+                  const timeStr = qDate.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
+                  return (
                   <div key={q.id} style={{ padding:"12px 14px", borderRadius:12, border:`1.5px solid ${C.border}`, background:C.bg }}>
                     <div style={{ display:"flex", justifyContent:"space-between", gap:8, marginBottom:6 }}>
                       <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.35 }}>{q.title}</div>
                       <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, background:"#fff3ee", color:C.orange, whiteSpace:"nowrap", flexShrink:0 }}>{q.durationMinutes}m</span>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
                       <Badge subject={q.subject} />
-                      <button onClick={() => navigate(`/candidate/quiz/${q.id}`)}
-                        style={{ padding:"6px 16px", borderRadius:10, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font }}>
-                        Start Quiz →
-                      </button>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:1 }}>
+                        <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
+                        <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                      </div>
                     </div>
+                    <button onClick={() => navigate(`/candidate/quiz/${q.id}`)}
+                      style={{ padding:"6px 16px", borderRadius:10, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%" }}>
+                      Start Quiz →
+                    </button>
                   </div>
-                ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming Quizzes */}
+          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
+            <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
+              <span style={{ width:8, height:8, borderRadius:"50%", background:C.orange, display:"inline-block" }}/>⏳ Upcoming
+            </div>
+            {upcomingQuizzes.length === 0 ? (
+              <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+                {upcomingQuizzes.map(q => {
+                  const qDate = new Date(q.scheduledDateTime);
+                  const dateStr = qDate.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+                  const timeStr = qDate.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
+                  return (
+                  <div key={q.id} style={{ padding:"12px 14px", borderRadius:12, border:`1.5px solid ${C.border}`, background:"#fffbeb" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", gap:8, marginBottom:6 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.35 }}>{q.title}</div>
+                      <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, background:"#fff3ee", color:C.orange, whiteSpace:"nowrap", flexShrink:0 }}>{q.durationMinutes}m</span>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                      <Badge subject={q.subject} />
+                      <CountdownTimer scheduledDateTime={q.scheduledDateTime} />
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:1, marginBottom:6, paddingBottom:6, borderBottom:`1px solid ${C.border}` }}>
+                      <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
+                      <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                    </div>
+                    <button disabled style={{ padding:"6px 16px", borderRadius:10, background:"#e5e7eb", color:"#9ca3af", border:"none", fontSize:12, fontWeight:700, cursor:"not-allowed", fontFamily:C.font, width:"100%" }}>
+                      Coming Soon...
+                    </button>
+                  </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -118,7 +254,7 @@ export default function MainDashboardPage() {
           {/* Completed */}
           <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:C.blue, display:"inline-block" }}/>Completed Quizzes
+              <span style={{ width:8, height:8, borderRadius:"50%", background:C.blue, display:"inline-block" }}/>✅ Completed
             </div>
             {completed.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No completed quizzes yet.</div>
@@ -128,6 +264,9 @@ export default function MainDashboardPage() {
                   const att  = attempts.find(a => a.quizId === q.id);
                   const pct  = att?.percentage ?? 0;
                   const pass = pct >= 60;
+                  const qDate = new Date(q.scheduledDateTime);
+                  const dateStr = qDate.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+                  const timeStr = qDate.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
                   return (
                     <div key={q.id} style={{ padding:"12px 14px", borderRadius:12, border:`1.5px solid ${C.border}`, background:C.bg }}>
                       <div style={{ display:"flex", justifyContent:"space-between", gap:8, marginBottom:6 }}>
@@ -140,10 +279,22 @@ export default function MainDashboardPage() {
                         </div>
                         <span style={{ fontSize:11, fontWeight:700, color:pass?"#16a34a":"#dc2626", minWidth:44 }}>{att?.score}/{att?.totalQuestions}</span>
                       </div>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
                         <Badge subject={q.subject} />
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:1 }}>
+                          <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
+                          <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                         <span style={{ fontSize:11, fontWeight:700, color:pass?"#16a34a":"#dc2626" }}>{pct.toFixed(1)}%</span>
                       </div>
+                      <button onClick={() => navigate(`/candidate/results?quizId=${q.id}`)}
+                        style={{ padding:"6px 14px", borderRadius:8, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%", transition:"all 0.2s", opacity:0.9 }}
+                        onMouseEnter={(e) => e.target.style.opacity = "1"}
+                        onMouseLeave={(e) => e.target.style.opacity = "0.9"}>
+                        📋 View Result
+                      </button>
                     </div>
                   );
                 })}

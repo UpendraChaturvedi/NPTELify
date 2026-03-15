@@ -25,6 +25,9 @@ public class Quiz {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column
+    private LocalDateTime scheduledDateTime;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "examiner_id", nullable = false)
     private User examiner;
@@ -52,6 +55,9 @@ public class Quiz {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getScheduledDateTime() { return scheduledDateTime; }
+    public void setScheduledDateTime(LocalDateTime scheduledDateTime) { this.scheduledDateTime = scheduledDateTime; }
 
     public User getExaminer() { return examiner; }
     public void setExaminer(User examiner) { this.examiner = examiner; }
