@@ -1,6 +1,6 @@
 // QuizPage.jsx — Full-screen quiz taking experience
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getQuizById, submitAttempt } from "../api/quizApi";
 
 const C = {
@@ -18,6 +18,7 @@ function formatTime(seconds) {
 export default function QuizPage() {
   const { id }    = useParams();
   const navigate  = useNavigate();
+  const location  = useLocation();
 
   const [quiz,     setQuiz]     = useState(null);
   const [answers,  setAnswers]  = useState([]);   // array of ints (null = not answered)
@@ -26,8 +27,13 @@ export default function QuizPage() {
   const [error,    setError]    = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [result,   setResult]   = useState(null);  // AttemptResponse after submit
-  const [tabSwitchCount, setTabSwitchCount] = useState(0);  // Track tab switches
-  const [showTabWarning, setShowTabWarning] = useState(false);  // Warning modal
+  const [tabSwitchCount, setTabSwitchCount] = useState(() => {
+    // Load tab switch count from sessionStorage on mount
+    const stored = sessionStorage.getItem(`quiz_${id}_tabSwitches`);
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const [showTabWarning, setShowTabWarning] = useState(false);
+  const pageLeftRef = useRef(false);
 
   useEffect(() => {
     getQuizById(id)
@@ -36,8 +42,22 @@ export default function QuizPage() {
         setAnswers(new Array(data.questions.length).fill(null));
         setTimeLeft(data.durationMinutes * 60);
         setLoading(false);
+        
+        // Request fullscreen mode on quiz load
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.log("⚠️ Fullscreen request failed:", err);
+          });
+        }
       })
       .catch(e => { setError(e.message); setLoading(false); });
+    
+    // Cleanup: Exit fullscreen when quiz is unloaded
+    return () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
   }, [id]);
 
   const handleSubmit = useCallback(async (forced = false) => {
@@ -65,31 +85,173 @@ export default function QuizPage() {
     return () => clearTimeout(t);
   }, [timeLeft, result, handleSubmit]);
 
-  // Tab switch detection - warn after 3 switches, auto-submit on 4th
+  // Save tab switch count to sessionStorage when it changes
   useEffect(() => {
+    sessionStorage.setItem(`quiz_${id}_tabSwitches`, tabSwitchCount);
+  }, [id, tabSwitchCount]);
+
+  // Clean up sessionStorage when quiz is submitted/completed
+  useEffect(() => {
+    if (result) {
+      sessionStorage.removeItem(`quiz_${id}_tabSwitches`);
+    }
+  }, [id, result]);
+
+  // Track browser back/forward navigation via location changes
+  useEffect(() => {
+    const quizPathRegex = new RegExp(`^/candidate/quiz/${id}$`);
+    const isCurrentlyOnQuiz = quizPathRegex.test(location.pathname);
+
+    // Mark if we're leaving the quiz page
+    if (!isCurrentlyOnQuiz && pageLeftRef.current === false) {
+      console.log("🔙 Left quiz page via navigation");
+      pageLeftRef.current = true;
+    }
+
+    // If we were away and now returning to this specific quiz page
+    if (isCurrentlyOnQuiz && pageLeftRef.current === true) {
+      console.log("↩️ Returned to quiz page via back/forward!");
+      pageLeftRef.current = false;
+      
+      const newCount = tabSwitchCount + 1;
+      setTabSwitchCount(newCount);
+      sessionStorage.setItem(`quiz_${id}_tabSwitches`, newCount);
+      console.log(`📊 Back/Forward Navigation detected! Count: ${newCount}/3`);
+
+      if (newCount === 1) {
+        setShowTabWarning(true);
+      } else if (newCount === 3) {
+        setShowTabWarning(true);
+      } else if (newCount > 3) {
+        handleSubmit(true);
+      } else {
+        setShowTabWarning(true);
+      }
+    }
+  }, [location.pathname, id, tabSwitchCount, handleSubmit]);
+
+  // Block browser navigation and prevent leaving during quiz
+  useEffect(() => {
+    if (!quiz || result) return; // Only block while quiz is active
+    
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "⚠️ You cannot leave the quiz. Your answers will be lost.";
+      return "⚠️ You cannot leave the quiz. Your answers will be lost.";
+    };
+    
+    const handlePopstate = (e) => {
+      e.preventDefault();
+      alert("❌ You cannot go back during a quiz. Please complete your attempt.");
+      window.history.forward();
+    };
+    
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handlePopstate);
+    
+    // Disable browser back button
+    window.history.pushState(null, null, window.location.href);
+    
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handlePopstate);
+    };
+  }, [quiz, result]);
+
+  // Tab switch and navigation detection
+  useEffect(() => {
+    let pageLeftViaNavigation = false;
+
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // User switched away from tab
+        pageLeftViaNavigation = true;
+        console.log("👁️ Page hidden (tab/navigation away)");
+      } else if (pageLeftViaNavigation) {
+        // Page became visible after being hidden
+        console.log("👁️ Page visible again!");
+        pageLeftViaNavigation = false;
         const newCount = tabSwitchCount + 1;
         setTabSwitchCount(newCount);
+        sessionStorage.setItem(`quiz_${id}_tabSwitches`, newCount);
+        console.log(`📊 Navigation/Tab switch detected! Count: ${newCount}/3`);
 
         if (newCount === 3) {
-          // Show final warning
           setShowTabWarning(true);
         } else if (newCount > 3) {
-          // Auto-submit quiz immediately
           handleSubmit(true);
-          return;
         } else {
-          // Show warning for switches 1-2
+          setShowTabWarning(true);
+        }
+      }
+    };
+
+    // Also detect leaving page entirely
+    const handleBeforeUnload = () => {
+      console.log("🚪 beforeunload - user leaving page");
+      pageLeftViaNavigation = true;
+    };
+
+    // When page regains focus after beforeunload
+    const handleFocus = () => {
+      if (pageLeftViaNavigation) {
+        console.log("🎯 Page refocused after navigation!");
+        pageLeftViaNavigation = false;
+        const newCount = tabSwitchCount + 1;
+        setTabSwitchCount(newCount);
+        sessionStorage.setItem(`quiz_${id}_tabSwitches`, newCount);
+        console.log(`📊 Back/Forward detected! Count: ${newCount}/3`);
+
+        if (newCount === 3) {
+          setShowTabWarning(true);
+        } else if (newCount > 3) {
+          handleSubmit(true);
+        } else {
           setShowTabWarning(true);
         }
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [tabSwitchCount, handleSubmit]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("focus", handleFocus);
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [id, tabSwitchCount, handleSubmit]);
+
+  // Block copy, paste, cut, select all, right-click, and developer tools
+  useEffect(() => {
+    const blockActions = (e) => {
+      // Block keyboard shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, Ctrl+Shift+I, F12
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'v' || e.key === 'x' || e.key === 'a')) {
+        e.preventDefault();
+      }
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'C')) {
+        e.preventDefault();
+      }
+      // Block right-click context menu
+      if (e.button === 2) e.preventDefault();
+    };
+
+    const blockContextMenu = (e) => e.preventDefault();
+
+    document.addEventListener("keydown", blockActions);
+    document.addEventListener("contextmenu", blockContextMenu);
+    document.addEventListener("copy", (e) => e.preventDefault());
+    document.addEventListener("paste", (e) => e.preventDefault());
+    document.addEventListener("cut", (e) => e.preventDefault());
+
+    return () => {
+      document.removeEventListener("keydown", blockActions);
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("copy", (e) => e.preventDefault());
+      document.removeEventListener("paste", (e) => e.preventDefault());
+      document.removeEventListener("cut", (e) => e.preventDefault());
+    };
+  }, []);
 
   const answeredCount = answers.filter(a => a !== null).length;
   const totalQ        = quiz?.questions?.length || 0;
@@ -201,41 +363,47 @@ export default function QuizPage() {
   );
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, fontFamily:C.font }}>
+    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, width:"100vw", height:"100vh", overflow:"hidden", background:C.bg, fontFamily:C.font, display:"flex", flexDirection:"column" }}>
+      {/* Fullscreen overlay to block interactions outside quiz */}
+      {!result && <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, pointerEvents:"none", zIndex:1 }}/>}
+      
       {/* Tab switch warning modal */}
       {showTabWarning && <TabWarningModal />}
       
-      {/* Sticky header */}
-      <div style={{ position:"sticky", top:0, zIndex:50, background:C.navy, padding:"14px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 16px #1a3a6b28" }}>
-        <div>
-          <div style={{ fontSize:11, color:"#a8c0e0", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>{quiz.subject}</div>
-          <div style={{ fontSize:16, fontWeight:900, color:"#fff", marginTop:2 }}>{quiz.title}</div>
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-          {/* Tab Switch Warning */}
-          {tabSwitchCount > 0 && (
-            <div style={{ textAlign:"center", padding:"8px 12px", background:"#fef3c7", borderRadius:8, border:"1.5px solid #fcd34d" }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#92400e" }}>⚠️ Tab Switches</div>
-              <div style={{ fontSize:12, fontWeight:900, color:"#dc2626" }}>{tabSwitchCount}/3</div>
+      {/* Main quiz container */}
+      <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
+        {/* Sticky header */}
+        <div style={{ position:"sticky", top:0, zIndex:50, background:C.navy, padding:"14px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 16px #1a3a6b28", flexShrink:0 }}>
+          <div>
+            <div style={{ fontSize:11, color:"#a8c0e0", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>{quiz.subject}</div>
+            <div style={{ fontSize:16, fontWeight:900, color:"#fff", marginTop:2 }}>{quiz.title}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+            {/* Tab Switch Warning */}
+            {tabSwitchCount > 0 && (
+              <div style={{ textAlign:"center", padding:"8px 12px", background:"#fef3c7", borderRadius:8, border:"1.5px solid #fcd34d" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#92400e" }}>⚠️ Tab Switches</div>
+                <div style={{ fontSize:12, fontWeight:900, color:"#dc2626" }}>{tabSwitchCount}/3</div>
+              </div>
+            )}
+            {/* Progress */}
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:14, fontWeight:900, color:C.orange }}>{answeredCount}/{totalQ}</div>
+              <div style={{ fontSize:10, color:"#a8c0e0" }}>Answered</div>
             </div>
-          )}
-          {/* Progress */}
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:14, fontWeight:900, color:C.orange }}>{answeredCount}/{totalQ}</div>
-            <div style={{ fontSize:10, color:"#a8c0e0" }}>Answered</div>
-          </div>
-          {/* Timer */}
-          <div style={{ background:`${timerColor}22`, border:`1.5px solid ${timerColor}55`, borderRadius:12, padding:"8px 16px", textAlign:"center", minWidth:80 }}>
-            <div style={{ fontSize:18, fontWeight:900, color:timerColor, fontVariantNumeric:"tabular-nums" }}>{formatTime(timeLeft)}</div>
-            <div style={{ fontSize:10, color:"#a8c0e0" }}>Remaining</div>
+            {/* Timer */}
+            <div style={{ background:`${timerColor}22`, border:`1.5px solid ${timerColor}55`, borderRadius:12, padding:"8px 16px", textAlign:"center", minWidth:80 }}>
+              <div style={{ fontSize:18, fontWeight:900, color:timerColor, fontVariantNumeric:"tabular-nums" }}>{formatTime(timeLeft)}</div>
+              <div style={{ fontSize:10, color:"#a8c0e0" }}>Remaining</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Questions */}
-      <div style={{ maxWidth:760, margin:"0 auto", padding:"28px 20px 100px" }}>
-        <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-          {quiz.questions.map((q, qi) => {
+        {/* Questions - Scrollable */}
+        <div style={{ flex:1, overflow:"auto", padding:"28px 20px 28px" }}>
+          <div style={{ maxWidth:760, margin:"0 auto" }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+              {quiz.questions.map((q, qi) => {
             const chosen = answers[qi];
             return (
               <div key={qi} style={{ background:C.card, borderRadius:16, border:`1.5px solid ${chosen !== null ? C.blue : C.border}`, overflow:"hidden", boxShadow:"0 2px 10px #1a3a6b08" }}>
@@ -279,20 +447,22 @@ export default function QuizPage() {
               </div>
             );
           })}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Sticky bottom submit bar */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:C.card, borderTop:`1.5px solid ${C.border}`, padding:"16px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 -4px 24px #1a3a6b10" }}>
-        <div style={{ fontSize:13, color:C.muted }}>
-          <span style={{ fontWeight:700, color:answeredCount === totalQ ? C.green : C.navy }}>{answeredCount}</span>/{totalQ} questions answered
-          {answeredCount < totalQ && <span style={{ color:C.orange, marginLeft:6 }}>({totalQ - answeredCount} unanswered will be marked wrong)</span>}
+        {/* Submit button bar - sticky at bottom */}
+        <div style={{ background:C.card, borderTop:`1.5px solid ${C.border}`, padding:"16px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 -4px 24px #1a3a6b10", flexShrink:0 }}>
+          <div style={{ fontSize:13, color:C.muted }}>
+            <span style={{ fontWeight:700, color:answeredCount === totalQ ? C.green : C.navy }}>{answeredCount}</span>/{totalQ} questions answered
+            {answeredCount < totalQ && <span style={{ color:C.orange, marginLeft:6 }}>({totalQ - answeredCount} unanswered will be marked wrong)</span>}
+          </div>
+          <button onClick={() => handleSubmit(false)} disabled={submitting}
+            style={{ padding:"12px 32px", borderRadius:12, background:submitting ? "#93c5fd" : C.blue, color:"#fff", border:"none", fontWeight:700, fontSize:14, cursor:submitting ? "not-allowed" : "pointer", fontFamily:C.font, display:"flex", alignItems:"center", gap:8 }}>
+            {submitting ? "Submitting…" : "Submit Quiz"}
+            {!submitting && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:15,height:15 }}><path d="M5 13l4 4L19 7"/></svg>}
+          </button>
         </div>
-        <button onClick={() => handleSubmit(false)} disabled={submitting}
-          style={{ padding:"12px 32px", borderRadius:12, background:submitting ? "#93c5fd" : C.blue, color:"#fff", border:"none", fontWeight:700, fontSize:14, cursor:submitting ? "not-allowed" : "pointer", fontFamily:C.font, display:"flex", alignItems:"center", gap:8 }}>
-          {submitting ? "Submitting…" : "Submit Quiz"}
-          {!submitting && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:15,height:15 }}><path d="M5 13l4 4L19 7"/></svg>}
-        </button>
       </div>
     </div>
   );
