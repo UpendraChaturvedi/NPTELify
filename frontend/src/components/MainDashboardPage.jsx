@@ -11,6 +11,18 @@ const C = {
   font: "'DM Sans', 'Segoe UI', sans-serif",
 };
 
+/* Icon SVG Renderer for Dashboard */
+function getDashboardIcon(iconType) {
+  const iconMap = {
+    quizzes: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg>,
+    completed: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4l-8.97 9.97-4.22-3.604"/></svg>,
+    live: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>,
+    upcoming: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>,
+    clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  };
+  return iconMap[iconType] || iconMap.quizzes;
+}
+
 function CountdownTimer({ scheduledDateTime }) {
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -21,7 +33,7 @@ function CountdownTimer({ scheduledDateTime }) {
       const diff = scheduled.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeLeft("Starting now! 🔴");
+        setTimeLeft("⚪ Starting now!");
         return;
       }
 
@@ -46,7 +58,7 @@ function CountdownTimer({ scheduledDateTime }) {
     return () => clearInterval(interval);
   }, [scheduledDateTime]);
 
-  return <span style={{ fontSize: 12, fontWeight: 700, color: "#f97316" }}>⏱️ {timeLeft}</span>;
+  return <span style={{ fontSize: 12, fontWeight: 700, color: "#f97316", display:"flex", alignItems:"center", gap:4 }}>{getDashboardIcon('clock')} {timeLeft}</span>;
 }
 
 function subjectColor(subject) {
@@ -145,7 +157,7 @@ export default function MainDashboardPage() {
         <div style={{ position:"absolute", top:-30, right:-30, width:180, height:180, borderRadius:"50%", background:C.orange, opacity:.12 }}/>
         <div style={{ position:"absolute", bottom:-40, left:160, width:140, height:140, borderRadius:"50%", background:C.blue, opacity:.18 }}/>
         <div style={{ position:"relative" }}>
-          <div style={{ fontSize:22, fontWeight:900, color:"#fff", marginBottom:4 }}>Hey {user?.name || "Candidate"}! 👋</div>
+          <div style={{ fontSize:22, fontWeight:900, color:"#fff", marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>Hey {user?.name || "Candidate"}! <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width:24, height:24 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg></div>
           <div style={{ fontSize:14, color:"#a8c0e0" }}>
             You have <span style={{ color:C.orange, fontWeight:700 }}>{available.length} quiz{available.length !== 1 ? "zes" : ""} available to attempt right now</span> (live quizzes only).
           </div>
@@ -155,13 +167,13 @@ export default function MainDashboardPage() {
       {/* Stat strip */}
       <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
         {[
-          { icon:"📝", label:"Total Quizzes",  value:quizzes.length,        color:C.blue },
-          { icon:"✅", label:"Completed",      value:completed.length,      color:"#16a34a" },
-          { icon:"🔴", label:"Live Now",      value:available.length,      color:"#dc2626" },
-          { icon:"⏳", label:"Upcoming",       value:upcomingQuizzes.length, color:C.orange },
+          { icon:"quizzes", label:"Total Quizzes",  value:quizzes.length,        color:C.blue },
+          { icon:"completed", label:"Completed",      value:completed.length,      color:"#16a34a" },
+          { icon:"live", label:"Live Now",      value:available.length,      color:"#dc2626" },
+          { icon:"upcoming", label:"Upcoming",       value:upcomingQuizzes.length, color:C.orange },
         ].map(s => (
           <div key={s.label} style={{ background:C.card, borderRadius:16, padding:"16px 20px", border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:14, flex:1, minWidth:0 }}>
-            <div style={{ width:42, height:42, borderRadius:12, background:`${s.color}12`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{s.icon}</div>
+            <div style={{ width:42, height:42, borderRadius:12, background:`${s.color}12`, display:"flex", alignItems:"center", justifyContent:"center", color:s.color, flexShrink:0 }}>{getDashboardIcon(s.icon)}</div>
             <div>
               <div style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1 }}>{s.value}</div>
               <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>{s.label}</div>
@@ -180,7 +192,9 @@ export default function MainDashboardPage() {
           {/* Live Quizzes */}
           <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:"#dc2626", display:"inline-block" }}/>🔴 Live Now
+              <span style={{ width:8, height:8, borderRadius:"50%", background:"#dc2626", display:"inline-block" }}/>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/></svg>
+              Live Now
             </div>
             {available.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No live quizzes available right now.</div>
@@ -200,12 +214,13 @@ export default function MainDashboardPage() {
                       <Badge subject={q.subject} />
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:1 }}>
                         <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
-                        <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                        <span style={{ fontSize:9, color:C.muted, display:"flex", alignItems:"center", gap:3 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {timeStr}</span>
                       </div>
                     </div>
                     <button onClick={() => navigate(`/candidate/quiz/${q.id}`)}
-                      style={{ padding:"6px 16px", borderRadius:10, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%" }}>
-                      Start Quiz →
+                      style={{ padding:"6px 16px", borderRadius:10, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%", transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                      Start Quiz
                     </button>
                   </div>
                   );
@@ -217,7 +232,9 @@ export default function MainDashboardPage() {
           {/* Upcoming Quizzes */}
           <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:C.orange, display:"inline-block" }}/>⏳ Upcoming
+              <span style={{ width:8, height:8, borderRadius:"50%", background:C.orange, display:"inline-block" }}/>
+              <svg viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2" style={{ width:16, height:16 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>
+              Upcoming
             </div>
             {upcomingQuizzes.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
@@ -239,7 +256,7 @@ export default function MainDashboardPage() {
                     </div>
                     <div style={{ display:"flex", flexDirection:"column", gap:1, marginBottom:6, paddingBottom:6, borderBottom:`1px solid ${C.border}` }}>
                       <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
-                      <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                      <span style={{ fontSize:9, color:C.muted, display:"flex", alignItems:"center", gap:3 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {timeStr}</span>
                     </div>
                     <button disabled style={{ padding:"6px 16px", borderRadius:10, background:"#e5e7eb", color:"#9ca3af", border:"none", fontSize:12, fontWeight:700, cursor:"not-allowed", fontFamily:C.font, width:"100%" }}>
                       Coming Soon...
@@ -254,7 +271,9 @@ export default function MainDashboardPage() {
           {/* Completed */}
           <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:C.blue, display:"inline-block" }}/>✅ Completed
+              <span style={{ width:8, height:8, borderRadius:"50%", background:C.blue, display:"inline-block" }}/>
+              <svg viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2" style={{ width:16, height:16 }}><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4l-8.97 9.97-4.22-3.604"/></svg>
+              Completed
             </div>
             {completed.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No completed quizzes yet.</div>
@@ -271,7 +290,7 @@ export default function MainDashboardPage() {
                     <div key={q.id} style={{ padding:"12px 14px", borderRadius:12, border:`1.5px solid ${C.border}`, background:C.bg }}>
                       <div style={{ display:"flex", justifyContent:"space-between", gap:8, marginBottom:6 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.35 }}>{q.title}</div>
-                        <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, background:pass?"#f0fdf4":"#fef2f2", color:pass?"#16a34a":"#dc2626" }}>{pass?"✓ Pass":"✗ Fail"}</span>
+                        <span style={{ padding:"3px 10px", borderRadius:999, fontSize:11, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, background:pass?"#f0fdf4":"#fef2f2", color:pass?"#16a34a":"#dc2626", display:"flex", alignItems:"center", gap:4 }}>{pass ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:14, height:14 }}><path d="M5 13l4 4L19 7"/></svg> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:14, height:14 }}><path d="M6 18L18 6M6 6l12 12"/></svg>} {pass ? "Pass" : "Fail"}</span>
                       </div>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
                         <div style={{ flex:1, height:5, borderRadius:999, background:C.border, overflow:"hidden" }}>
@@ -283,17 +302,18 @@ export default function MainDashboardPage() {
                         <Badge subject={q.subject} />
                         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:1 }}>
                           <span style={{ fontSize:10, fontWeight:600, color:C.blue }}>{dateStr}</span>
-                          <span style={{ fontSize:9, color:C.muted }}>⏰ {timeStr}</span>
+                          <span style={{ fontSize:9, color:C.muted, display:"flex", alignItems:"center", gap:3 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {timeStr}</span>
                         </div>
                       </div>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                         <span style={{ fontSize:11, fontWeight:700, color:pass?"#16a34a":"#dc2626" }}>{pct.toFixed(1)}%</span>
                       </div>
                       <button onClick={() => navigate(`/candidate/results?quizId=${q.id}`)}
-                        style={{ padding:"6px 14px", borderRadius:8, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%", transition:"all 0.2s", opacity:0.9 }}
+                        style={{ padding:"6px 14px", borderRadius:8, background:C.blue, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:C.font, width:"100%", transition:"all 0.2s", opacity:0.9, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
                         onMouseEnter={(e) => e.target.style.opacity = "1"}
                         onMouseLeave={(e) => e.target.style.opacity = "0.9"}>
-                        📋 View Result
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>
+                        View Result
                       </button>
                     </div>
                   );

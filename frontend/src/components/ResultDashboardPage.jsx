@@ -11,6 +11,18 @@ const C = {
 
 const PALETTE = [C.blue, C.orange, "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#be185d"];
 
+const getDashboardResultIcon = (type) => {
+  const icons = {
+    document: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg>,
+    chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>,
+    checkmark: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4l-8.97 9.97-4.22-3.604"/></svg>,
+    trophy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M6 9H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2v-9a2 2 0 00-2-2h-2M6 5h12M9 5a3 3 0 016 0M9 5a3 3 0 011 2.83V9M15 5a3 3 0 00-1 2.83V9M12 12v3"/></svg>,
+    download: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
+    clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  };
+  return icons[type] || icons.document;
+};
+
 function DonutChart({ data, avgPct }) {
   const total = data.reduce((s,d) => s+d.value, 0) || 1;
   const r=70, cx=100, cy=100, sw=28, circ=2*Math.PI*r;
@@ -85,6 +97,16 @@ export default function ResultsDashboardPage() {
       .catch(e => { setError(e.message); setLoading(false); });
   }, [quizId]);
 
+  // Inject spin animation
+  useEffect(() => {
+    if (typeof document !== 'undefined' && !document.getElementById('result-dashboard-spin-styles')) {
+      const style = document.createElement('style');
+      style.id = 'result-dashboard-spin-styles';
+      style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   // Month navigation handlers
   const goToPreviousMonth = () => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
@@ -112,7 +134,7 @@ export default function ResultsDashboardPage() {
   if (error)   return <div style={{ padding:40, textAlign:"center", color:"#dc2626" }}>Error: {error}</div>;
   if (attempts.length === 0) return (
     <div style={{ padding:40, textAlign:"center", color:C.muted }}>
-      <div style={{ fontSize:48, marginBottom:12 }}>📝</div>
+      <div style={{ fontSize:48, marginBottom:12, color:C.blue }}>{getDashboardResultIcon('document')}</div>
       <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>No quizzes attempted yet</div>
       <div style={{ fontSize:13, marginTop:6 }}>Complete a quiz to see your results here.</div>
     </div>
@@ -151,8 +173,9 @@ export default function ResultsDashboardPage() {
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <h1 style={{ fontSize:28, fontWeight:900, color:C.navy, margin:0 }}>
-            {quizId && attempts.length > 0 ? `📋 ${attempts[0].quizTitle}` : "Results Dashboard"}
+          <h1 style={{ fontSize:28, fontWeight:900, color:C.navy, margin:0, display:"flex", alignItems:"center", gap:10 }}>
+            {quizId && attempts.length > 0 && <span style={{ width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", color:C.blue, flexShrink:0 }}>{getDashboardResultIcon('document')}</span>}
+            {quizId && attempts.length > 0 ? attempts[0].quizTitle : "Results Dashboard"}
           </h1>
           <p style={{ fontSize:13, color:C.muted, margin:"4px 0 0 0" }}>
             {quizId && attempts.length > 0 ? "Your detailed quiz result" : "Track your performance across all quizzes"}
@@ -167,13 +190,13 @@ export default function ResultsDashboardPage() {
       {/* Summary */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14 }}>
         {[
-          { label:"Best Score",    value:`${bestScore}%`, color:"#16a34a", icon:"🏆" },
-          { label:"Average Score", value:`${avgScore}%`,  color:C.blue,    icon:"📊" },
-          { label:"Total Quizzes", value:attempts.length, color:C.navy,    icon:"📝" },
-          { label:"Pass Rate",     value:`${passRate}%`,  color:C.orange,  icon:"✅" },
+          { label:"Best Score",    value:`${bestScore}%`, color:"#16a34a", icon:"trophy" },
+          { label:"Average Score", value:`${avgScore}%`,  color:C.blue,    icon:"chart" },
+          { label:"Total Quizzes", value:attempts.length, color:C.navy,    icon:"document" },
+          { label:"Pass Rate",     value:`${passRate}%`,  color:C.orange,  icon:"checkmark" },
         ].map(s=>(
           <div key={s.label} style={{ background:C.card, borderRadius:16, padding:"18px 20px", border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:42, height:42, borderRadius:12, background:`${s.color}12`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>{s.icon}</div>
+            <div style={{ width:42, height:42, borderRadius:12, background:`${s.color}12`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, color:s.color }}>{getDashboardResultIcon(s.icon)}</div>
             <div>
               <div style={{ fontSize:22, fontWeight:900, color:s.color, lineHeight:1 }}>{s.value}</div>
               <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{s.label}</div>
@@ -231,8 +254,9 @@ export default function ResultsDashboardPage() {
       </div>
       {/* Table */}
       <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, overflow:"hidden" }}>
-        <div style={{ padding:"16px 20px", borderBottom:`1.5px solid ${C.border}`, fontSize:14, fontWeight:800, color:C.navy }}>
-          📋 Results from {monthYearString} {selectedMonthAttempts.length > 0 ? `(${selectedMonthAttempts.length})` : "(No data)"}
+        <div style={{ padding:"16px 20px", borderBottom:`1.5px solid ${C.border}`, fontSize:14, fontWeight:800, color:C.navy, display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center", color:C.blue, flexShrink:0 }}>{getDashboardResultIcon('document')}</span>
+          Results from {monthYearString} {selectedMonthAttempts.length > 0 ? `(${selectedMonthAttempts.length})` : "(No data)"}
         </div>
         <div style={{ overflowX:"auto" }}>
           {sorted.length === 0 ? (
@@ -277,8 +301,15 @@ export default function ResultsDashboardPage() {
                           <button
                             onClick={() => handleDownloadPdf(r.id)}
                             disabled={downloadingId === r.id}
-                            style={{ fontSize:11, fontWeight:700, color:downloadingId === r.id ? C.muted : "#16a34a", background:"none", border:`1px solid ${downloadingId === r.id ? C.border : "#16a34a"}`, borderRadius:8, padding:"4px 10px", cursor:downloadingId === r.id ? "not-allowed" : "pointer", opacity:downloadingId === r.id ? 0.6 : 1 }}
-                          >{downloadingId === r.id ? "⏳" : "📥"} PDF</button>
+                            style={{ fontSize:11, fontWeight:700, color:downloadingId === r.id ? C.muted : "#16a34a", background:"none", border:`1px solid ${downloadingId === r.id ? C.border : "#16a34a"}`, borderRadius:8, padding:"4px 10px", cursor:downloadingId === r.id ? "not-allowed" : "pointer", opacity:downloadingId === r.id ? 0.6 : 1, display:"flex", alignItems:"center", gap:4 }}
+                          >
+                            {downloadingId === r.id ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12, animation:'spin 0.6s linear infinite' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            )}
+                            PDF
+                          </button>
                         </div>
                       </td>
                     </tr>

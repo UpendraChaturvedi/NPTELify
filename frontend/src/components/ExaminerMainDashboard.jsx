@@ -19,6 +19,17 @@ const C = {
   font:"'DM Sans','Segoe UI',sans-serif",
 };
 
+/* Icon SVG Renderer for Examiner Dashboard */
+function getExaminerIcon(iconType) {
+  const iconMap = {
+    totalQuizzes: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 7H20v10a2 2 0 01-2 2H6.5a2 2 0 01-2-2V4.5z"/></svg>,
+    totalQuestions: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M9 12l2 2 4-4M7 20h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v11a2 2 0 002 2z"/></svg>,
+    upcoming: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>,
+    past: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  };
+  return iconMap[iconType] || iconMap.totalQuizzes;
+}
+
 // Function to serialize quiz data for URL
 const serializeQuizForCopy = (quiz) => {
   return BToa(JSON.stringify({
@@ -66,7 +77,19 @@ function Badge({ subject }) {
 function StatCard({ icon, label, value, color }) {
   return (
     <div style={{ background:C.card,borderRadius:16,padding:"18px 20px",border:`1.5px solid ${C.border}`,display:"flex",alignItems:"center",gap:14,flex:1,minWidth:0 }}>
-      <div style={{ width:44,height:44,borderRadius:12,background:`${color}12`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>{icon}</div>
+      <div style={{ width:44,height:44,borderRadius:12,background:`${color}12`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,color }}>{icon}</div>
+      <div>
+        <div style={{ fontSize:24,fontWeight:900,color,lineHeight:1 }}>{value}</div>
+        <div style={{ fontSize:11,color:C.muted,marginTop:3 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function StatCardSvg({ icon, label, value, color }) {
+  return (
+    <div style={{ background:C.card,borderRadius:16,padding:"18px 20px",border:`1.5px solid ${C.border}`,display:"flex",alignItems:"center",gap:14,flex:1,minWidth:0 }}>
+      <div style={{ width:44,height:44,borderRadius:12,background:`${color}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color }}>{getExaminerIcon(icon)}</div>
       <div>
         <div style={{ fontSize:24,fontWeight:900,color,lineHeight:1 }}>{value}</div>
         <div style={{ fontSize:11,color:C.muted,marginTop:3 }}>{label}</div>
@@ -154,39 +177,62 @@ function QuizCard({ quiz, onRefresh, quizType = "upcoming" }) {
           <Badge subject={quiz.subject} />
           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1 }}>
             <span style={{ fontSize:11,fontWeight:600,color:C.blue }}>{dateStr}</span>
-            <span style={{ fontSize:10,color:C.muted }}>⏰ {timeStr}</span>
+            <span style={{ fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:3 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {timeStr}</span>
           </div>
         </div>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,paddingBottom:10,borderBottom:`1px solid ${C.border}`,marginBottom:10 }}>
           <div style={{ display:"flex",alignItems:"center",gap:10 }}>
             <div style={{ display:"flex",alignItems:"center",gap:4 }}>
-              <span style={{ fontSize:12,fontWeight:700,color:C.purple }}>👥 {attemptCount}</span>
+              <span style={{ fontSize:12,fontWeight:700,color:C.purple,display:"flex",alignItems:"center",gap:4 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, color:C.purple }}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> {attemptCount}</span>
               <span style={{ fontSize:10,color:C.muted }}>attempt{attemptCount !== 1 ? "s" : ""}</span>
             </div>
-            <span style={{ fontSize:11,fontWeight:700,color:C.blue }}>📝 {qCount} Qs</span>
+            <span style={{ fontSize:11,fontWeight:700,color:C.blue,display:"flex",alignItems:"center",gap:4 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg> {qCount} Qs</span>
           </div>
         </div>
         <div style={{ display:"flex",gap:8,justifyContent:"flex-end" }}>
           {quizType === "upcoming" && (
             <>
-              <button onClick={handleEdit} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s" }}>
-                ✎ Edit
+              <button onClick={() => onEdit(quiz.id)} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M17 3a2.828 2.828 0 115.656 0L5 21H3v-2L17 3z"/></svg>
+                <span>Edit</span>
               </button>
-              <button onClick={() => setShowDeleteConfirm(true)} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.red,background:"transparent",color:C.red,cursor:"pointer",transition:"all 0.2s" }}>
-                🗑 Delete
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.red,background:"transparent",color:C.red,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span>Delete</span>
               </button>
             </>
           )}
           {quizType === "past" && (
             <>
-              <button onClick={handleReview} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s" }}>
-                📊 Review
+              <button onClick={handleReview} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>
+                <span>Review</span>
               </button>
-              <button onClick={handleDownloadPdf} disabled={downloading} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.green,background:"transparent",color:C.green,cursor:downloading?"not-allowed":"pointer",transition:"all 0.2s",opacity:downloading?0.6:1 }}>
-                {downloading ? "⏳ Generating..." : "📥 PDF"}
+              <button onClick={handleDownloadPdf} disabled={downloading} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.green,background:"transparent",color:C.green,cursor:downloading?"not-allowed":"pointer",transition:"all 0.2s",opacity:downloading?0.6:1,display:"flex",alignItems:"center",gap:6 }}>
+                {downloading ? (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, animation:"spin 1s linear infinite" }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>Generating...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    <span>PDF</span>
+                  </>
+                )}
               </button>
-              <button onClick={handleCopyQuiz} disabled={copying} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.purple,background:"transparent",color:C.purple,cursor:copying?"not-allowed":"pointer",transition:"all 0.2s",opacity:copying?0.6:1 }}>
-                {copying ? "⏳ Copying..." : "📋 Copy"}
+              <button onClick={handleCopyQuiz} disabled={copying} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.purple,background:"transparent",color:C.purple,cursor:copying?"not-allowed":"pointer",transition:"all 0.2s",opacity:copying?0.6:1,display:"flex",alignItems:"center",gap:6 }}>
+                {copying ? (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, animation:"spin 1s linear infinite" }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    <span>Copying...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <span>Copy</span>
+                  </>
+                )}
               </button>
             </>
           )}
@@ -310,7 +356,7 @@ export default function ExaminerMainDashboard() {
         <div style={{ position:"absolute",top:10,right:220,width:100,height:100,borderRadius:"50%",background:C.purple,opacity:.12 }}/>
         <div style={{ position:"relative" }}>
           <div style={{ fontSize:11,color:"#a8c0e0",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6 }}>Examiner Portal</div>
-          <div style={{ fontSize:24,fontWeight:900,color:"#fff",marginBottom:4 }}>Welcome back, {user?.name || "Examiner"}! 🎓</div>
+          <div style={{ fontSize:24,fontWeight:900,color:"#fff",marginBottom:4,display:"flex",alignItems:"center",gap:8 }}>Welcome back, {user?.name || "Examiner"}! <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{ width:28, height:28 }}><path d="M20 13c0-5.523-4.477-10-10-10S0 7.477 0 13s4.477 10 10 10h10v-9z"/><path d="M13 10l-2 3-2-2m4 5h-4m6-8h.01M7 10h.01"/></svg></div>
           <div style={{ fontSize:14,color:"#a8c0e0" }}>
             You have <span style={{ color:C.orange,fontWeight:700 }}>{quizzes.length} quiz{quizzes.length !== 1 ? "zes" : ""} created</span> in total.
           </div>
@@ -319,10 +365,10 @@ export default function ExaminerMainDashboard() {
 
       {/* Stat cards */}
       <div style={{ display:"flex",gap:14,flexWrap:"wrap" }}>
-        <StatCard icon="📋" label="Total Quizzes Created"  value={quizzes.length} color={C.blue} />
-        <StatCard icon="📝" label="Total Questions"        value={totalQuestions}  color={C.purple} />
-        <StatCard icon="⏳" label="Upcoming Quizzes"       value={upcoming.length}  color={C.green} />
-        <StatCard icon="🔴" label="Past Quizzes"           value={past.length}     color={C.orange} />
+        <StatCardSvg icon="totalQuizzes" label="Total Quizzes Created"  value={quizzes.length} color={C.blue} />
+        <StatCardSvg icon="totalQuestions" label="Total Questions"        value={totalQuestions}  color={C.purple} />
+        <StatCardSvg icon="upcoming" label="Upcoming Quizzes"       value={upcoming.length}  color={C.green} />
+        <StatCardSvg icon="past" label="Past Quizzes"           value={past.length}     color={C.orange} />
       </div>
 
       {/* Three-column */}
@@ -332,7 +378,8 @@ export default function ExaminerMainDashboard() {
         <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:C.green,display:"inline-block" }}/>
-            ⏳ Upcoming Quizzes
+            <svg viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2" style={{ width:16, height:16 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>
+            Upcoming Quizzes
           </div>
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : upcoming.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
@@ -347,7 +394,8 @@ export default function ExaminerMainDashboard() {
         <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:"#dc2626",display:"inline-block",animation:"pulse 1s infinite" }}/>
-            🔴 Live Quizzes
+            <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/></svg>
+            Live Quizzes
           </div>
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : live.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No live quizzes at the moment.</div>
@@ -362,7 +410,8 @@ export default function ExaminerMainDashboard() {
         <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:C.orange,display:"inline-block" }}/>
-            🔙 Past Quizzes
+            <svg viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Past Quizzes
           </div>
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : past.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No past quizzes yet.</div>

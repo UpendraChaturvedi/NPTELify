@@ -25,13 +25,39 @@ const C = {
   font:   "'DM Sans','Segoe UI',sans-serif",
 };
 
+const getProfileIcon = (type) => {
+  const icons = {
+    profile: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 110 8 4 4 0 010-8z"/></svg>,
+    moon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+    sun: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+    help: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>,
+    logout: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>,
+    info: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
+    phone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>,
+  };
+  return icons[type] || icons.profile;
+};
+
 /* ─── Nav Items ──────────────────────────────────────── */
 const NAV = [
-  { id:"main",        label:"Main Dashboard",       icon:"🏠" },
-  { id:"create",      label:"Create Quiz",           icon:"✏️" },
-  { id:"results",     label:"Results Dashboard",     icon:"📊" },
-  { id:"progress",    label:"Progress Dashboard",    icon:"📈" },
+  { id:"main",        label:"Main Dashboard",       icon:"home" },
+  { id:"create",      label:"Create Quiz",           icon:"pencil" },
+  { id:"results",     label:"Results Dashboard",     icon:"chart" },
+  { id:"progress",    label:"Progress Dashboard",    icon:"trending" },
+  { id:"question-bank", label:"Question Bank",      icon:"book" },
 ];
+
+/* Icon SVG Renderer */
+function getNavIcon(iconType, color = C.body) {
+  const iconMap = {
+    home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h3v-5h4v5h3a1 1 0 001-1v-9"/></svg>,
+    pencil: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M17 3a2.828 2.828 0 115.656 0L5 21H3v-2L17 3z"/></svg>,
+    chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>,
+    trending: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><polyline points="23 6 13.5 15.5 8.5 10.5 1 17"/><polyline points="17 6 23 6 23 12"/></svg>,
+    book: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 7H20v10a2 2 0 01-2 2H6.5a2 2 0 01-2-2V4.5z"/></svg>
+  };
+  return iconMap[iconType] || iconMap.home;
+}
 
 /* ─── Shared subject colors ──────────────────────────── */
 const SUBJ = {
@@ -100,7 +126,7 @@ function Sidebar({ active, onSelect, userName, onLogout }) {
                 borderLeft: isA ? `3px solid ${C.blue}` : "3px solid transparent",
                 marginBottom:2,
               }}>
-              <span style={{ fontSize:16, flexShrink:0 }}>{item.icon}</span>
+              <span style={{ color: isA ? C.blue : isH ? C.navy : C.body, flexShrink:0 }}>{getNavIcon(item.icon, isA ? C.blue : isH ? C.navy : C.body)}</span>
               {item.label}
             </button>
           );
@@ -311,7 +337,8 @@ function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onTogg
                     e.currentTarget.style.paddingLeft = "16px";
                   }}
                 >
-                  👤 Edit Profile
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>{getProfileIcon('profile')}</div>
+                  Edit Profile
                 </button>
                 <button
                   onClick={handleThemeToggle}
@@ -337,7 +364,8 @@ function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onTogg
                     e.currentTarget.style.paddingLeft = "16px";
                   }}
                 >
-                  {isDarkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>{isDarkMode ? getProfileIcon('sun') : getProfileIcon('moon')}</div>
+                  {isDarkMode ? "Light Mode" : "Dark Mode"}
                 </button>
                 <button
                   onClick={() => { navigate("/help"); setProfileOpen(false); }}
@@ -363,7 +391,8 @@ function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onTogg
                     e.currentTarget.style.paddingLeft = "16px";
                   }}
                 >
-                  ❓ Help & Support
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>{getProfileIcon('help')}</div>
+                  Help & Support
                 </button>
                 <button
                   onClick={handleLogout}
@@ -388,7 +417,8 @@ function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onTogg
                     e.currentTarget.style.paddingLeft = "16px";
                   }}
                 >
-                  🚪 Logout
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>{getProfileIcon('logout')}</div>
+                  Logout
                 </button>
               </div>
             </div>
@@ -604,9 +634,9 @@ function CalendarPanel() {
 
       {/* Help & support */}
       <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, padding:"14px" }}>
-        <div style={{ fontSize:12, fontWeight:800, color:C.navy, marginBottom:6 }}>ℹ️ Help &amp; Support</div>
+        <div style={{ fontSize:12, fontWeight:800, color:C.navy, marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>{getProfileIcon('info')} Help &amp; Support</div>
         <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>Technical Support</div>
-        <div style={{ fontSize:12, fontWeight:700, color:C.blue }}>📞 7037555457</div>
+        <div style={{ fontSize:12, fontWeight:700, color:C.blue, display:"flex", alignItems:"center", gap:6 }}>{getProfileIcon('phone')} 7037555457</div>
       </div>
     </div>
   );

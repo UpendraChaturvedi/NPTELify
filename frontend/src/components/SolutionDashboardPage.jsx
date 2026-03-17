@@ -8,6 +8,15 @@ const C = {
   font: "'DM Sans', 'Segoe UI', sans-serif",
 };
 
+const getSolutionIcon = (type) => {
+  const icons = {
+    document: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg>,
+    download: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
+    clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  };
+  return icons[type] || icons.document;
+};
+
 function QuestionCard({ q, idx }) {
   const [open, setOpen] = useState(false);
   const isOK = q.correct;
@@ -77,6 +86,16 @@ export default function SolutionDashboardPage() {
       .catch(e => { setError(e.message); setLoading(false); });
   }, [attemptId]);
 
+  // Inject spin animation
+  useEffect(() => {
+    if (typeof document !== 'undefined' && !document.getElementById('solution-dashboard-spin-styles')) {
+      const style = document.createElement('style');
+      style.id = 'solution-dashboard-spin-styles';
+      style.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   const handleDownloadPdf = async () => {
     setDownloadingId(attemptId);
     try {
@@ -95,7 +114,7 @@ export default function SolutionDashboardPage() {
     if (error)       return <div style={{ padding:40, textAlign:"center", color:"#dc2626" }}>Error: {error}</div>;
     if (attempts.length === 0) return (
       <div style={{ padding:40, textAlign:"center", color:C.muted }}>
-        <div style={{ fontSize:48, marginBottom:12 }}>📋</div>
+        <div style={{ fontSize:48, marginBottom:12, color:C.blue }}>{getSolutionIcon('document')}</div>
         <div style={{ fontSize:16, fontWeight:700, color:C.navy }}>No attempts yet</div>
         <div style={{ fontSize:13, marginTop:6 }}>Take a quiz first to review solutions here.</div>
       </div>
@@ -150,7 +169,12 @@ export default function SolutionDashboardPage() {
           disabled={downloadingId === attemptId}
           style={{ background:C.blue, color:"#fff", border:"none", borderRadius:10, padding:"8px 16px", fontSize:12, fontWeight:700, cursor:downloadingId === attemptId ? "not-allowed" : "pointer", opacity:downloadingId === attemptId ? 0.6 : 1, display:"flex", alignItems:"center", gap:6 }}
         >
-          {downloadingId === attemptId ? "⏳" : "📥"} Download PDF
+          {downloadingId === attemptId ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12, animation:'spin 0.6s linear infinite' }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:12, height:12 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          )}
+          Download PDF
         </button>
       </div>
       {/* Result card */}

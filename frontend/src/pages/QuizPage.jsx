@@ -33,6 +33,9 @@ export default function QuizPage() {
     return stored ? parseInt(stored, 10) : 0;
   });
   const [showTabWarning, setShowTabWarning] = useState(false);
+  const [markedForReview, setMarkedForReview] = useState(new Set());  // Set of question indices
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState(new Set());  // Set of question indices
+  const [showNavigator, setShowNavigator] = useState(true);  // Toggle navigator sidebar
   const pageLeftRef = useRef(false);
 
   useEffect(() => {
@@ -64,9 +67,8 @@ export default function QuizPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      // Replace any unanswered (null) with 0 since backend validates count
-      const finalAnswers = answers.map(a => a ?? 0);
-      const res = await submitAttempt(Number(id), finalAnswers);
+      // Send answers as-is (null for unanswered, null is ignored by backend scorer)
+      const res = await submitAttempt(Number(id), answers);
       setResult(res);
     } catch (e) {
       alert(e.message || "Submission failed. Please try again.");
@@ -96,6 +98,25 @@ export default function QuizPage() {
       sessionStorage.removeItem(`quiz_${id}_tabSwitches`);
     }
   }, [id, result]);
+
+  // Save marked for review to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem(`quiz_${id}_marked`, JSON.stringify(Array.from(markedForReview)));
+  }, [id, markedForReview]);
+
+  // Save bookmarked questions to sessionStorage (persist across sessions)
+  useEffect(() => {
+    localStorage.setItem(`quiz_${id}_bookmarks`, JSON.stringify(Array.from(bookmarkedQuestions)));
+  }, [id, bookmarkedQuestions]);
+
+  // Load marked and bookmarked from storage on mount
+  useEffect(() => {
+    const marked = sessionStorage.getItem(`quiz_${id}_marked`);
+    const bookmarks = localStorage.getItem(`quiz_${id}_bookmarks`);
+    
+    if (marked) setMarkedForReview(new Set(JSON.parse(marked)));
+    if (bookmarks) setBookmarkedQuestions(new Set(JSON.parse(bookmarks)));
+  }, [id]);
 
   // Track browser back/forward navigation via location changes
   useEffect(() => {
@@ -277,7 +298,7 @@ export default function QuizPage() {
                 <text x="60" y="56" textAnchor="middle" style={{ fontSize:20, fontWeight:900, fill:"#fff", fontFamily:C.font }}>{result.percentage.toFixed(0)}%</text>
                 <text x="60" y="72" textAnchor="middle" style={{ fontSize:11, fill:"#a8c0e0", fontFamily:C.font }}>{pass?"PASS":"FAIL"}</text>
               </svg>
-              <div style={{ fontSize:22, fontWeight:900, color:pass?"#4ade80":"#f87171" }}>{pass?"Congratulations! 🎉":"Better luck next time"}</div>
+              <div style={{ fontSize:22, fontWeight:900, color:pass?"#4ade80":"#f87171" }}>{pass?"Congratulations!":"Better luck next time"}</div>
             </div>
           </div>
 
@@ -370,13 +391,20 @@ export default function QuizPage() {
       {/* Tab switch warning modal */}
       {showTabWarning && <TabWarningModal />}
       
-      {/* Main quiz container */}
+      {/* Main quiz container with navigator */}
       <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
         {/* Sticky header */}
         <div style={{ position:"sticky", top:0, zIndex:50, background:C.navy, padding:"14px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 2px 16px #1a3a6b28", flexShrink:0 }}>
-          <div>
-            <div style={{ fontSize:11, color:"#a8c0e0", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>{quiz.subject}</div>
-            <div style={{ fontSize:16, fontWeight:900, color:"#fff", marginTop:2 }}>{quiz.title}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            {/* Navigator Toggle */}
+            <button onClick={() => setShowNavigator(!showNavigator)}
+              style={{ padding:"8px 12px", borderRadius:8, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", color:"#fff", cursor:"pointer", fontSize:12, fontWeight:700 }}>
+              {showNavigator ? "Hide" : "Show"} Navigator
+            </button>
+            <div>
+              <div style={{ fontSize:11, color:"#a8c0e0", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase" }}>{quiz.subject}</div>
+              <div style={{ fontSize:16, fontWeight:900, color:"#fff", marginTop:2 }}>{quiz.title}</div>
+            </div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
             {/* Tab Switch Warning */}
@@ -399,26 +427,145 @@ export default function QuizPage() {
           </div>
         </div>
 
+        {/* Main content area with navigator */}
+        <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
+          {/* Navigator Sidebar */}
+          {showNavigator && (
+            <div style={{ width:240, background:C.card, borderRight:`1.5px solid ${C.border}`, overflow:"auto", padding:"16px", display:"flex", flexDirection:"column", gap:12, flexShrink:0, boxShadow:"2px 0 8px rgba(26, 58, 107, 0.06)" }}>
+              <div style={{ fontSize:13, fontWeight:900, color:C.navy, display:"flex", alignItems:"center", gap:8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" opacity="0.8">
+                  <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+                </svg>
+                Question Navigator
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                {quiz.questions.map((q, qi) => {
+                  const isAnswered = answers[qi] !== null && answers[qi] !== undefined;
+                  const isMarked = markedForReview.has(qi);
+                  const isBookmarked = bookmarkedQuestions.has(qi);
+                  
+                  return (
+                    <button key={qi}
+                      onClick={() => document.getElementById(`q-${qi}`)?.scrollIntoView({ behavior:"smooth", block:"center" })}
+                      style={{
+                        padding:"10px 12px", borderRadius:8, border:`1.5px solid ${isAnswered ? C.blue : C.border}`,
+                        background: isAnswered ? `${C.blue}11` : "transparent", cursor:"pointer", textAlign:"left",
+                        display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, fontSize:11, fontWeight:700, color:C.navy,
+                        transition:"all 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `${C.blue}08`;
+                        e.currentTarget.style.borderColor = C.blue;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = isAnswered ? `${C.blue}11` : "transparent";
+                        e.currentTarget.style.borderColor = isAnswered ? C.blue : C.border;
+                      }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <div style={{ width:20, height:20, borderRadius:"50%", background: isAnswered ? C.blue : C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:900, color:"#fff", flexShrink:0, transition:"all 0.2s" }}>
+                          {isAnswered ? "✓" : qi + 1}
+                        </div>
+                        <span style={{ fontSize:10, fontWeight:600 }}>Q{qi + 1}</span>
+                      </div>
+                      <div style={{ display:"flex", gap:3 }}>
+                        {isMarked && <svg width="12" height="12" viewBox="0 0 24 24" fill={C.orange} title="Marked for Review"><path d="M12 2L15.09 8.26H22L17.54 12.88L18.91 19.12L12 15.4L5.09 19.12L6.45 12.88L2 8.26H8.91L12 2Z"/></svg>}
+                        {isBookmarked && <svg width="12" height="12" viewBox="0 0 24 24" fill={C.blue} title="Bookmarked"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Legend */}
+              <div style={{ fontSize:9, color:C.muted, borderTop:`1px solid ${C.border}`, paddingTop:10, marginTop:10, lineHeight:1.6 }}>
+                <div style={{ marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+                  <div style={{ width:16, height:16, borderRadius:"50%", background:C.blue, color:"#fff", fontWeight:900, fontSize:8, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>✓</div>
+                  <span>Answered</span>
+                </div>
+                <div style={{ marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={C.orange}><path d="M12 2L15.09 8.26H22L17.54 12.88L18.91 19.12L12 15.4L5.09 19.12L6.45 12.88L2 8.26H8.91L12 2Z"/></svg>
+                  <span>For Review</span>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={C.blue}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                  <span>Bookmarked</span>
+                </div>
+              </div>
+            </div>
+          )}
+
         {/* Questions - Scrollable */}
         <div style={{ flex:1, overflow:"auto", padding:"28px 20px 28px" }}>
           <div style={{ maxWidth:760, margin:"0 auto" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
               {quiz.questions.map((q, qi) => {
             const chosen = answers[qi];
+            const isMarked = markedForReview.has(qi);
+            const isBookmarked = bookmarkedQuestions.has(qi);
             return (
-              <div key={qi} style={{ background:C.card, borderRadius:16, border:`1.5px solid ${chosen !== null ? C.blue : C.border}`, overflow:"hidden", boxShadow:"0 2px 10px #1a3a6b08" }}>
+              <div key={qi} style={{ background:C.card, borderRadius:16, border:`1.5px solid ${chosen !== null ? C.blue : C.border}`, overflow:"hidden", boxShadow:"0 4px 16px rgba(26, 58, 107, 0.08)", transition:"all 0.2s" }} id={`q-${qi}`}>
                 {/* Question header */}
-                <div style={{ background:C.altBg, padding:"12px 20px", display:"flex", alignItems:"center", gap:10, borderBottom:`1px solid ${C.border}` }}>
-                  <div style={{ width:28, height:28, borderRadius:"50%", background:chosen !== null ? C.blue : C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, color:"#fff", flexShrink:0 }}>
-                    {qi + 1}
+                <div style={{ background:`linear-gradient(135deg, ${C.altBg} 0%, #ffffff 100%)`, padding:"16px 20px", display:"flex", alignItems:"center", gap:12, borderBottom:`1.5px solid ${C.border}`, justifyContent:"space-between" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ width:32, height:32, borderRadius:10, background:chosen !== null ? `linear-gradient(135deg, ${C.blue}, ${C.blue}dd)` : C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:chosen !== null ? "#fff" : C.muted, flexShrink:0, boxShadow: chosen !== null ? `0 2px 8px ${C.blue}26` : "none" }}>
+                      {qi + 1}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:800, color:C.navy }}>Question {qi + 1} of {totalQ}</div>
+                      {chosen !== null && <div style={{ fontSize:10, fontWeight:700, color:C.green, marginTop:2 }}>✓ Answered</div>}
+                    </div>
                   </div>
-                  <span style={{ fontSize:12, fontWeight:700, color:C.muted }}>Question {qi + 1} of {totalQ}</span>
-                  {chosen !== null && <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700, color:C.blue }}>✓ Answered</span>}
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    {/* Mark for Review Button */}
+                    <button onClick={() => {
+                      const newMarked = new Set(markedForReview);
+                      if (newMarked.has(qi)) newMarked.delete(qi);
+                      else newMarked.add(qi);
+                      setMarkedForReview(newMarked);
+                    }}
+                      title="Mark for review"
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:8, border:`1.5px solid ${isMarked ? C.orange : C.border}`, background:isMarked ? `${C.orange}dd` : "transparent", cursor:"pointer", fontFamily:C.font, fontSize:12, fontWeight:700, color:isMarked ? C.orange : C.muted, transition:"all 0.2s" }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `${C.orange}22`;
+                        e.currentTarget.style.borderColor = C.orange;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = isMarked ? `${C.orange}dd` : "transparent";
+                        e.currentTarget.style.borderColor = isMarked ? C.orange : C.border;
+                      }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ opacity:0.8 }}>
+                        <path d="M12 2L15.09 8.26H22L17.54 12.88L18.91 19.12L12 15.4L5.09 19.12L6.45 12.88L2 8.26H8.91L12 2Z"/>
+                      </svg>
+                      <span style={{ fontWeight:700 }}>Review</span>
+                    </button>
+                    {/* Bookmark Button */}
+                    <button onClick={() => {
+                      const newBookmarks = new Set(bookmarkedQuestions);
+                      if (newBookmarks.has(qi)) newBookmarks.delete(qi);
+                      else newBookmarks.add(qi);
+                      setBookmarkedQuestions(newBookmarks);
+                    }}
+                      title="Bookmark question"
+                      style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:8, border:`1.5px solid ${isBookmarked ? C.blue : C.border}`, background:isBookmarked ? `${C.blue}18` : "transparent", cursor:"pointer", fontFamily:C.font, fontSize:12, fontWeight:700, color:isBookmarked ? C.blue : C.muted, transition:"all 0.2s" }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `${C.blue}22`;
+                        e.currentTarget.style.borderColor = C.blue;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = isBookmarked ? `${C.blue}18` : "transparent";
+                        e.currentTarget.style.borderColor = isBookmarked ? C.blue : C.border;
+                      }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ opacity:0.8 }}>
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      <span style={{ fontWeight:700 }}>Save</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ padding:"18px 20px" }}>
-                  <p style={{ margin:"0 0 16px", fontSize:14, fontWeight:700, color:C.navy, lineHeight:1.6 }}>{q.text}</p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ padding:"24px 20px" }}>
+                  <p style={{ margin:"0 0 20px", fontSize:15, fontWeight:800, color:C.navy, lineHeight:1.7, letterSpacing:"-0.3px" }}>{q.text}</p>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     {q.options.map((opt, oi) => {
                       const isChosen = chosen === oi;
                       return (
@@ -428,16 +575,29 @@ export default function QuizPage() {
                             newAns[qi] = oi;
                             setAnswers(newAns);
                           }}
-                          style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", borderRadius:12,
+                          style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12,
                             border:`1.5px solid ${isChosen ? C.blue : C.border}`,
-                            background: isChosen ? C.altBg : C.bg,
-                            cursor:"pointer", textAlign:"left", fontFamily:C.font, transition:"all 0.12s",
+                            background: isChosen ? `linear-gradient(135deg, ${C.blue}18, ${C.blue}08)` : C.bg,
+                            cursor:"pointer", textAlign:"left", fontFamily:C.font, transition:"all 0.15s",
+                            boxShadow: isChosen ? `0 2px 8px ${C.blue}22` : "none",
+                          }}
+                          onMouseEnter={(e) => {
+                            if(!isChosen) {
+                              e.currentTarget.style.borderColor = C.blue;
+                              e.currentTarget.style.background = `${C.blue}08`;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if(!isChosen) {
+                              e.currentTarget.style.borderColor = C.border;
+                              e.currentTarget.style.background = C.bg;
+                            }
                           }}>
-                          <div style={{ width:22, height:22, borderRadius:"50%", border:`2px solid ${isChosen ? C.blue : C.border}`, background:isChosen ? C.blue : "#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.12s" }}>
-                            {isChosen && <div style={{ width:8, height:8, borderRadius:"50%", background:"#fff" }}/>}
+                          <div style={{ width:24, height:24, borderRadius:"50%", border:`2.5px solid ${isChosen ? C.blue : C.border}`, background:isChosen ? C.blue : "#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.15s", boxShadow: isChosen ? `0 2px 6px ${C.blue}44` : "none" }}>
+                            {isChosen && <div style={{ width:9, height:9, borderRadius:"50%", background:"#fff" }}/>}
                           </div>
-                          <span style={{ fontSize:13, fontWeight: isChosen ? 700 : 400, color: isChosen ? C.navy : C.body }}>
-                            <strong style={{ color:C.muted, marginRight:6 }}>{String.fromCharCode(65+oi)}.</strong>{opt}
+                          <span style={{ fontSize:14, fontWeight: isChosen ? 700 : 500, color: isChosen ? C.navy : C.body, lineHeight:1.5 }}>
+                            <strong style={{ color:C.muted, marginRight:8, fontWeight:800 }}>{String.fromCharCode(65+oi)}.</strong>{opt}
                           </span>
                         </button>
                       );
@@ -450,6 +610,59 @@ export default function QuizPage() {
             </div>
           </div>
         </div>
+        </div>
+
+        {/* Review Panel */}
+        {(markedForReview.size > 0 || bookmarkedQuestions.size > 0) && (
+          <div style={{ background:`linear-gradient(135deg, ${C.altBg}, #f9fbff)`, borderTop:`1.5px solid ${C.border}`, padding:"20px 32px", display:"flex", gap:32, flexWrap:"wrap", alignItems:"center", justifyContent:"center" }}>
+            {markedForReview.size > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:16, padding:"12px 16px", borderRadius:12, background:C.card, border:`1.5px solid ${C.orange}33`, boxShadow:"0 2px 8px #f973161a" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:800, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>
+                    <svg style={{ display:"inline", width:12, height:12, marginRight:4, verticalAlign:"middle" }} viewBox="0 0 24 24" fill="currentColor" color={C.orange}>
+                      <path d="M12 2L15.09 8.26H22L17.54 12.88L18.91 19.12L12 15.4L5.09 19.12L6.45 12.88L2 8.26H8.91L12 2Z"/>
+                    </svg>
+                    Review Later
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:900, color:C.navy }}>{markedForReview.size}</div>
+                </div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", maxWidth:300 }}>
+                  {Array.from(markedForReview).map(qi => (
+                    <button key={qi} onClick={() => document.getElementById(`q-${qi}`)?.scrollIntoView({ behavior:"smooth", block:"center" })}
+                      style={{ minWidth:32, height:32, borderRadius:8, background:C.orange, color:"#fff", border:"none", fontWeight:700, cursor:"pointer", fontSize:11, transition:"all 0.2s", boxShadow:"0 2px 6px rgba(249, 115, 22, 0.3)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
+                      {qi + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {bookmarkedQuestions.size > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:16, padding:"12px 16px", borderRadius:12, background:C.card, border:`1.5px solid ${C.blue}33`, boxShadow:"0 2px 8px #2563eb1a" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:800, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>
+                    <svg style={{ display:"inline", width:12, height:12, marginRight:4, verticalAlign:"middle" }} viewBox="0 0 24 24" fill="currentColor" color={C.blue}>
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Bookmarked
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:900, color:C.navy }}>{bookmarkedQuestions.size}</div>
+                </div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", maxWidth:300 }}>
+                  {Array.from(bookmarkedQuestions).map(qi => (
+                    <button key={qi} onClick={() => document.getElementById(`q-${qi}`)?.scrollIntoView({ behavior:"smooth", block:"center" })}
+                      style={{ minWidth:32, height:32, borderRadius:8, background:C.blue, color:"#fff", border:"none", fontWeight:700, cursor:"pointer", fontSize:11, transition:"all 0.2s", boxShadow:"0 2px 6px rgba(37, 99, 235, 0.3)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
+                      {qi + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Submit button bar - sticky at bottom */}
         <div style={{ background:C.card, borderTop:`1.5px solid ${C.border}`, padding:"16px 32px", display:"flex", alignItems:"center", justifyContent:"space-between", boxShadow:"0 -4px 24px #1a3a6b10", flexShrink:0 }}>

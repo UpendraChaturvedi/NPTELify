@@ -411,7 +411,7 @@ export default function ExaminerCreateQuizDashboard() {
     return (
       <div style={{ display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh",fontFamily:C.font }}>
         <div style={{ background:C.card,borderRadius:20,padding:"48px 40px",textAlign:"center",border:`1.5px solid ${C.border}`,maxWidth:480 }}>
-          <div style={{ width:64,height:64,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px",fontSize:28 }}>✅</div>
+          <div style={{ width:64,height:64,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px",color:"#16a34a" }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ width:40, height:40 }}><path d="M5 13l4 4L19 7"/></svg></div>
           <h2 style={{ margin:"0 0 8px",fontSize:22,fontWeight:900,color:C.navy }}>{submitted.isEdit ? "Quiz Updated!" : "Quiz Published!"}</h2>
           <p style={{ margin:"0 0 8px",fontSize:14,color:C.muted }}>"{submitted.title}" has been {submitted.isEdit ? "updated" : "published"} successfully.</p>
           {submitted.skipped > 0 && (

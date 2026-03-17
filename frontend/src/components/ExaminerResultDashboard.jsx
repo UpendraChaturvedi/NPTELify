@@ -9,6 +9,17 @@ const C = {
   font:"'DM Sans','Segoe UI',sans-serif",
 };
 
+/* Icon SVG Renderer for Result Cards */
+function getResultIcon(iconType) {
+  const iconMap = {
+    quiz: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg>,
+    submitted: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M11 21H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10M19 13l-6 6-3-3M7 12l3 3 8-8"/></svg>,
+    score: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>,
+    passrate: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:20, height:20 }}><path d="M22 10.5l-8.5 8.5-4-4-9 9M22 3.5v7h-7"/></svg>
+  };
+  return iconMap[iconType] || iconMap.quiz;
+}
+
 // Bar chart for score distribution
 function ScoreDistBar({ scores }) {
   const buckets = [[0,40],[40,50],[50,60],[60,70],[70,80],[80,90],[90,100]];
@@ -201,7 +212,17 @@ export default function ExaminerResultDashboard() {
               onClick={handleDownloadPdf}
               disabled={downloadingId === selectedId || !selectedId}
               style={{ padding:"9px 16px",borderRadius:10,background:downloadingId===selectedId?"#e5e7eb":C.green,color:"#fff",border:"none",fontSize:12,fontWeight:700,cursor:downloadingId===selectedId?"not-allowed":"pointer",fontFamily:C.font,display:"flex",alignItems:"center",gap:6,opacity:downloadingId===selectedId?0.6:1,transition:"all 0.15s",whiteSpace:"nowrap" }}>
-              {downloadingId === selectedId ? "⏳ Generating..." : "📥 Download PDF"}
+              {downloadingId === selectedId ? (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, animation:"spin 1s linear infinite" }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                  <span>Download PDF</span>
+                </>
+              )}
             </button>
           </>
         )}
@@ -210,13 +231,13 @@ export default function ExaminerResultDashboard() {
       {/* Summary cards */}
       <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14 }}>
         {[
-          { icon:"📋", label:"Quiz",            value:selectedQuiz?.title ?? "—",   color:C.blue   },
-          { icon:"📩", label:"Total Submitted",  value:totalSubmitted,               color:C.green  },
-          { icon:"📊", label:"Avg Score",        value:totalSubmitted ? `${avgPct}%` : "—", color:C.orange },
-          { icon:"✅", label:"Pass Rate (≥60%)", value:totalSubmitted ? `${passRate}%` : "—", color:"#9333ea" },
+          { icon:"quiz", label:"Quiz",            value:selectedQuiz?.title ?? "—",   color:C.blue   },
+          { icon:"submitted", label:"Total Submitted",  value:totalSubmitted,               color:C.green  },
+          { icon:"score", label:"Avg Score",        value:totalSubmitted ? `${avgPct}%` : "—", color:C.orange },
+          { icon:"passrate", label:"Pass Rate (≥60%)", value:totalSubmitted ? `${passRate}%` : "—", color:"#9333ea" },
         ].map(s=>(
           <div key={s.label} style={{ background:C.card,borderRadius:16,padding:"18px 20px",border:`1.5px solid ${C.border}`,display:"flex",alignItems:"center",gap:14 }}>
-            <div style={{ width:44,height:44,borderRadius:12,background:`${s.color}12`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>{s.icon}</div>
+            <div style={{ width:44,height:44,borderRadius:12,background:`${s.color}12`,display:"flex",alignItems:"center",justifyContent:"center",color:s.color }}>{getResultIcon(s.icon)}</div>
             <div>
               <div style={{ fontSize:s.label==="Quiz"?13:22,fontWeight:900,color:s.color,lineHeight:1.2 }}>{s.value}</div>
               <div style={{ fontSize:11,color:C.muted,marginTop:2 }}>{s.label}</div>

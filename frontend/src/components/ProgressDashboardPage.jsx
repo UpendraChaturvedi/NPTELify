@@ -9,13 +9,25 @@ const C = {
 };
 
 const BADGES = [
-  { icon:"🎯", label:"First Quiz",    earned:true  },
-  { icon:"🔥", label:"5-Quiz Streak", earned:true  },
-  { icon:"⭐", label:"90%+ Score",    earned:false },
-  { icon:"🏆", label:"Top 10%",       earned:false },
-  { icon:"📚", label:"5 Subjects",    earned:true  },
-  { icon:"💡", label:"Perfect Score", earned:false },
+  { icon:"target", label:"First Quiz",    earned:true  },
+  { icon:"flame", label:"5-Quiz Streak", earned:true  },
+  { icon:"star", label:"90%+ Score",    earned:false },
+  { icon:"trophy", label:"Top 10%",       earned:false },
+  { icon:"book", label:"5 Subjects",    earned:true  },
+  { icon:"lightbulb", label:"Perfect Score", earned:false },
 ];
+
+const getProgressIcon = (type) => {
+  const icons = {
+    target: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+    flame: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M12 2c1 0 2 1 2 3 0 1-1 2-1 4 0 2 1 3 1 5 0 3-2 5-2 5 0 0-2-2-2-5 0-2 1-3 1-4 0-2-1-3-1-4 0-2 1-3 2-3z"/></svg>,
+    star: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><polygon points="12 2 15.09 10.26 24 10.27 17.18 16.91 20.27 25.07 12 19.39 3.73 25.07 6.82 16.91 0 10.27 8.91 10.26 12 2"/></svg>,
+    trophy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M6 9H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2v-9a2 2 0 00-2-2h-2M6 5h12M9 5a3 3 0 016 0M9 5a3 3 0 011 2.83V9M15 5a3 3 0 00-1 2.83V9M12 12v3"/></svg>,
+    book: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 7H20v10a2 2 0 01-2 2H6.5a2 2 0 01-2-2V4.5z"/></svg>,
+    lightbulb: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  };
+  return icons[type] || icons.target;
+};
 
 function RadialProgress({ value, size=80, stroke=10, color }) {
   const r=(size-stroke)/2, circ=2*Math.PI*r, filled=(value/100)*circ;
@@ -156,7 +168,7 @@ export default function ProgressDashboardPage() {
         <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:12 }}>
           {earnedBadges.map((b,i)=>(
             <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"14px 8px", borderRadius:14, border:`1.5px solid ${b.earned?C.blue:C.border}`, background:b.earned?C.altBg:C.bg, opacity:b.earned?1:0.45 }}>
-              <span style={{ fontSize:26 }}>{b.icon}</span>
+              <span style={{ fontSize:26, color:b.earned?C.blue:C.muted, display:"flex", alignItems:"center", justifyContent:"center", width:28, height:28 }}>{getProgressIcon(b.icon)}</span>
               <span style={{ fontSize:11, fontWeight:700, color:b.earned?C.navy:C.muted, textAlign:"center", lineHeight:1.3 }}>{b.label}</span>
               {b.earned && <span style={{ fontSize:10, color:C.blue, fontWeight:700 }}>Earned</span>}
             </div>
