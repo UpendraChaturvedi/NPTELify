@@ -15,10 +15,17 @@ public class QuizResponse {
     private String examinerName;
     private List<QuestionDto> questions;
     private int attemptCount;
+    private boolean allowMultipleAttempts;
 
     public QuizResponse(Long id, String title, String subject, int durationMinutes,
                         LocalDateTime createdAt, LocalDateTime scheduledDateTime, String examinerName, List<QuestionDto> questions,
                         int attemptCount) {
+        this(id, title, subject, durationMinutes, createdAt, scheduledDateTime, examinerName, questions, attemptCount, false);
+    }
+
+    public QuizResponse(Long id, String title, String subject, int durationMinutes,
+                        LocalDateTime createdAt, LocalDateTime scheduledDateTime, String examinerName, List<QuestionDto> questions,
+                        int attemptCount, boolean allowMultipleAttempts) {
         this.id = id;
         this.title = title;
         this.subject = subject;
@@ -28,6 +35,7 @@ public class QuizResponse {
         this.examinerName = examinerName;
         this.questions = questions;
         this.attemptCount = attemptCount;
+        this.allowMultipleAttempts = allowMultipleAttempts;
     }
 
     public Long getId() { return id; }
@@ -39,6 +47,7 @@ public class QuizResponse {
     public String getExaminerName() { return examinerName; }
     public List<QuestionDto> getQuestions() { return questions; }
     public int getAttemptCount() { return attemptCount; }
+    public boolean isAllowMultipleAttempts() { return allowMultipleAttempts; }
 
     public static class QuestionDto {
         private Long id;

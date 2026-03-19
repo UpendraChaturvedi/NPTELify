@@ -35,6 +35,9 @@ public class Quiz {
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Question> questions = new ArrayList<>();
 
+    @Column(nullable = false)
+    private boolean allowMultipleAttempts = false;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
@@ -64,4 +67,7 @@ public class Quiz {
 
     public List<Question> getQuestions() { return questions; }
     public void setQuestions(List<Question> questions) { this.questions = questions; }
+
+    public boolean isAllowMultipleAttempts() { return allowMultipleAttempts; }
+    public void setAllowMultipleAttempts(boolean allowMultipleAttempts) { this.allowMultipleAttempts = allowMultipleAttempts; }
 }

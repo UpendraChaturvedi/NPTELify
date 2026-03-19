@@ -40,6 +40,7 @@ public class QuizService {
         quiz.setSubject(request.getSubject());
         quiz.setDurationMinutes(request.getDurationMinutes());
         quiz.setScheduledDateTime(request.getScheduledDateTime());
+        quiz.setAllowMultipleAttempts(request.isAllowMultipleAttempts());
         quiz.setExaminer(examiner);
 
         for (QuizRequest.QuestionDto qDto : request.getQuestions()) {
@@ -134,7 +135,7 @@ public class QuizService {
         return new QuizResponse(
                 quiz.getId(), quiz.getTitle(), quiz.getSubject(),
                 quiz.getDurationMinutes(), quiz.getCreatedAt(), quiz.getScheduledDateTime(),
-                quiz.getExaminer().getName(), questions, attemptCount
+                quiz.getExaminer().getName(), questions, attemptCount, quiz.isAllowMultipleAttempts()
         );
     }
 
@@ -156,6 +157,7 @@ public class QuizService {
         quiz.setSubject(request.getSubject());
         quiz.setDurationMinutes(request.getDurationMinutes());
         quiz.setScheduledDateTime(request.getScheduledDateTime());
+        quiz.setAllowMultipleAttempts(request.isAllowMultipleAttempts());
 
         // Clear old questions and add new ones
         quiz.getQuestions().clear();

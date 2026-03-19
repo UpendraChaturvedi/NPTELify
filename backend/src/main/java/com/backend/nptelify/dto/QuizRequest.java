@@ -22,6 +22,8 @@ public class QuizRequest {
 
     private LocalDateTime scheduledDateTime;
 
+    private boolean allowMultipleAttempts = false;
+
     @NotEmpty
     @Valid
     private List<QuestionDto> questions;
@@ -38,6 +40,9 @@ public class QuizRequest {
 
     public LocalDateTime getScheduledDateTime() { return scheduledDateTime; }
     public void setScheduledDateTime(LocalDateTime scheduledDateTime) { this.scheduledDateTime = scheduledDateTime; }
+
+    public boolean isAllowMultipleAttempts() { return allowMultipleAttempts; }
+    public void setAllowMultipleAttempts(boolean allowMultipleAttempts) { this.allowMultipleAttempts = allowMultipleAttempts; }
 
     public List<QuestionDto> getQuestions() { return questions; }
     public void setQuestions(List<QuestionDto> questions) { this.questions = questions; }
