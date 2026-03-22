@@ -151,7 +151,7 @@ export default function MainDashboardPage() {
     : 0;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:20, fontFamily:C.font }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:20, fontFamily:C.font, height:"100vh", overflow:"hidden" }}>
       {/* Banner */}
       <div style={{ borderRadius:18, padding:"24px 28px", background:C.navy, position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:-30, right:-30, width:180, height:180, borderRadius:"50%", background:C.orange, opacity:.12 }}/>
@@ -188,9 +188,9 @@ export default function MainDashboardPage() {
         <div style={{ padding:"16px", borderRadius:12, background:"#fef2f2", border:"1px solid #fca5a5", color:"#991b1b", fontSize:13 }}>{error}</div>
       ) : (
         /* Three columns */
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:18 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:18, flex:1, overflow:"hidden" }}>
           {/* Live Quizzes */}
-          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
+          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
               <span style={{ width:8, height:8, borderRadius:"50%", background:"#dc2626", display:"inline-block" }}/>
               <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/></svg>
@@ -199,7 +199,7 @@ export default function MainDashboardPage() {
             {available.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No live quizzes available right now.</div>
             ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto", flex:1 }}>
                 {available.map(q => {
                   const qDate = new Date(q.scheduledDateTime);
                   const dateStr = qDate.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
@@ -230,7 +230,7 @@ export default function MainDashboardPage() {
           </div>
 
           {/* Upcoming Quizzes */}
-          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
+          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
               <span style={{ width:8, height:8, borderRadius:"50%", background:C.orange, display:"inline-block" }}/>
               <svg viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2" style={{ width:16, height:16 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>
@@ -239,7 +239,7 @@ export default function MainDashboardPage() {
             {upcomingQuizzes.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
             ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto", flex:1 }}>
                 {upcomingQuizzes.map(q => {
                   const qDate = new Date(q.scheduledDateTime);
                   const dateStr = qDate.toLocaleDateString("en-IN", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
@@ -269,7 +269,7 @@ export default function MainDashboardPage() {
           </div>
 
           {/* Completed */}
-          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px" }}>
+          <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"20px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
             <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:14, display:"flex", alignItems:"center", gap:7 }}>
               <span style={{ width:8, height:8, borderRadius:"50%", background:C.blue, display:"inline-block" }}/>
               <svg viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2" style={{ width:16, height:16 }}><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4l-8.97 9.97-4.22-3.604"/></svg>
@@ -278,7 +278,7 @@ export default function MainDashboardPage() {
             {completed.length === 0 ? (
               <div style={{ fontSize:13, color:C.muted, padding:"12px 0" }}>No completed quizzes yet.</div>
             ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:400, overflowY:"auto" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, overflowY:"auto", flex:1 }}>
                 {completed.map(q => {
                   const att  = attempts.find(a => a.quizId === q.id);
                   const pct  = att?.percentage ?? 0;

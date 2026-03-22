@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { loginApi } from "../api/authApi";
@@ -19,21 +19,15 @@ const C = {
 /* ─── Logo ─── */
 function Logo({ onClick }) {
   return (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-            <img
-                src="/logo_half.png"
-                alt="logo"
-                style={{
-                    width: 36,
-                    height: 36,
-                    objectFit: "contain"
-                }}
-                />
-            <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
-              <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
-            </span>
-        </div>
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:9, background:"none", border:"none", cursor:"pointer", padding:0 }}>
+      <img
+        src="/logo_half.png"
+        alt="logo"
+        style={{ width:36, height:36, objectFit:"contain" }}
+      />
+      <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
+        <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
+      </span>
     </button>
   );
 }
@@ -42,17 +36,28 @@ function Logo({ onClick }) {
 function Navbar() {
   const navigate = useNavigate();
   const [hov, setHov] = useState(false);
+  const [hovHelp, setHovHelp] = useState(false);
   return (
     <nav style={{ position:"sticky", top:0, zIndex:50, background:C.card, borderBottom:`1.5px solid ${C.border}`, fontFamily:C.font }}>
-      <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 24px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <Logo onClick={() => navigate("/home")} />
-        <button
-          onClick={() => navigate("/signup")}
-          onMouseEnter={() => setHov(true)}
-          onMouseLeave={() => setHov(false)}
-          style={{ padding:"9px 20px", borderRadius:10, fontSize:13, fontWeight:700, color:"#fff", background: hov ? "#e56c0a" : C.orange, border:"none", cursor:"pointer", transition:"background 0.18s" }}>
-          Sign Up Free
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <button
+            onClick={() => navigate("/help")}
+            onMouseEnter={() => setHovHelp(true)}
+            onMouseLeave={() => setHovHelp(false)}
+            style={{ padding:"8px 18px", fontSize:13, fontWeight:700, borderRadius:10, cursor:"pointer", transition:"all .18s", border:"1.5px solid #2563eb", background: hovHelp ? "#2563eb" : "transparent", color: hovHelp ? "#fff" : "#2563eb", fontFamily:C.font }}
+          >
+            Help
+          </button>
+          <button
+            onClick={() => navigate("/signup")}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{ padding:"9px 20px", borderRadius:10, fontSize:13, fontWeight:700, color:"#fff", background: hov ? "#e56c0a" : C.orange, border:"none", cursor:"pointer", transition:"background 0.18s" }}>
+            Sign Up Free
+          </button>
+        </div>
       </div>
     </nav>
   );
@@ -176,8 +181,26 @@ export default function LoginPage() {
   const [show, setShow]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr]     = useState("");
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const navigate = useNavigate();
   const auth = useAuth();
+
+  // Redirect after successful login
+  useEffect(() => {
+    if (justLoggedIn && auth.user) {
+      const dashboardPath = auth.user.role === "examiner" ? "/examiner/dashboard" : "/candidate/dashboard";
+      navigate(dashboardPath, { replace: true });
+      setJustLoggedIn(false);
+    }
+  }, [justLoggedIn, auth.user, navigate]);
+
+  // If logged in user visits login page (via back button or direct URL), redirect to dashboard
+  useEffect(() => {
+    if (auth.user && !justLoggedIn && !loading) {
+      // Always go to the user's respective dashboard when they visit login page while logged in
+      navigate(auth.user.role === "examiner" ? "/examiner/dashboard" : "/candidate/dashboard", { replace: true });
+    }
+  }, [auth.user, navigate, justLoggedIn, loading]);
 
   const handle = e => { setForm(p => ({ ...p, [e.target.name]: e.target.value })); setErr(""); };
 
@@ -188,11 +211,14 @@ export default function LoginPage() {
     setErr("");
     try {
       const data = await loginApi(form.email, form.password);
+      // Clear the lastPage before login
+      sessionStorage.removeItem("lastPage");
+      // Update auth context
       auth.login(data);
-      navigate(data.role === "examiner" ? "/examiner" : "/candidate/dashboard");
+      // Set flag to trigger post-login navigation
+      setJustLoggedIn(true);
     } catch (error) {
       setErr(error.message || "Invalid email or password");
-    } finally {
       setLoading(false);
     }
   };

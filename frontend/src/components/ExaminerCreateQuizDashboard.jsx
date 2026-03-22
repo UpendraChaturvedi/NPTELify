@@ -429,7 +429,7 @@ export default function ExaminerCreateQuizDashboard() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display:"flex",flexDirection:"column",gap:18,fontFamily:C.font,maxWidth:860 }}>
+    <form onSubmit={handleSubmit} style={{ display:"flex",flexDirection:"column",gap:18,fontFamily:C.font,width:"100%" }}>
 
       {/* ── Header strip */}
       <div style={{ background:C.navy,borderRadius:18,padding:"20px 26px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
@@ -446,20 +446,23 @@ export default function ExaminerCreateQuizDashboard() {
       {/* ── Quiz Metadata */}
       {sectionCard(
         <>
-          <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:18,display:"flex",alignItems:"center",gap:8 }}>
-            <div style={{ width:28,height:28,borderRadius:8,background:C.altBg,display:"flex",alignItems:"center",justifyContent:"center" }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2" style={{ width:15,height:15 }}><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:18,display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ width:32,height:32,borderRadius:10,background:C.altBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke={C.blue} strokeWidth="2" style={{ width:16,height:16 }}><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
-            Quiz Details
+            <span>Quiz Details</span>
           </div>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:16 }}>
+          
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:14 }}>
             <FInput label="Quiz Title" placeholder="e.g. Python for DS — Week 8 Assignment" value={meta.title} onChange={e=>setM("title",e.target.value)} required />
             <FInput label="Subject" placeholder="e.g. Python for Data Science" value={meta.subject} onChange={e=>setM("subject",e.target.value)} required />
           </div>
-          <div style={{ marginTop:14 }}>
+          
+          <div style={{ marginBottom:14 }}>
             <FTextarea label="Description / Instructions" placeholder="Provide any instructions or context for the candidate…" value={meta.description} onChange={e=>setM("description",e.target.value)} rows={2} />
           </div>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:14,marginTop:14 }}>
+          
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:14 }}>
             <FInput label="Date of Exam" type="date" value={meta.date} onChange={e=>setM("date",e.target.value)} required />
             <FInput label="Time" type="time" value={meta.time} onChange={e=>setM("time",e.target.value)} required />
             <FInput label="Duration (mins)" type="number" placeholder="e.g. 45" value={meta.duration} onChange={e=>setM("duration",e.target.value)} required />

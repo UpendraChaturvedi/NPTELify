@@ -128,7 +128,7 @@ export default function ImportQuestionsPage() {
   };
 
   return (
-    <DashboardLayout pageTitle="Import Questions">
+    <DashboardLayout pageTitle="Import Questions" activeNav="question-bank">
       <div style={{ minHeight:"100vh", background:C.bg, fontFamily:C.font, padding:"32px 20px" }}>
         <div style={{ maxWidth:1200, margin:"0 auto" }}>
         {/* Header */}

@@ -283,8 +283,8 @@ export default function Home() {
           </div>
           <p style={{ fontSize:13, color:"#7a8faf", margin:0 }}>© 2026 NPTELify. Built for NPTEL learners across India.</p>
           <div style={{ display:"flex", gap:22 }}>
-            {["Privacy","Terms","Contact"].map(l=>(
-              <a key={l} href="#" style={{ fontSize:13, color:"#7a8faf", textDecoration:"none", fontWeight:600 }}
+            {["Help", "Privacy","Terms","Contact"].map(l=>(
+              <a key={l} href={l === "Help" ? "/help" : "#"} style={{ fontSize:13, color:"#7a8faf", textDecoration:"none", fontWeight:600 }}
                 onMouseEnter={e=>e.target.style.color="#2563eb"}
                 onMouseLeave={e=>e.target.style.color="#7a8faf"}>{l}</a>
             ))}

@@ -1,12 +1,24 @@
-// notificationStore.js - Notification state management
+// notificationStore.js - Notification state management (User-specific)
 
 let listeners = [];
 let notifications = [];
+let currentUserId = null;
+
+// Get storage key for a specific user
+function getStorageKey(suffix) {
+  const keyPrefix = currentUserId ? `notifications_${currentUserId}` : "notifications";
+  return suffix ? `${keyPrefix}_${suffix}` : keyPrefix;
+}
+
+// Set current user ID (called when user logs in/out)
+function setCurrentUser(userId) {
+  currentUserId = userId;
+}
 
 // Load notifications from localStorage
 function loadNotifications() {
   try {
-    const stored = localStorage.getItem("notifications");
+    const stored = localStorage.getItem(getStorageKey());
     notifications = stored ? JSON.parse(stored) : [];
   } catch (e) {
     console.error("Failed to load notifications:", e);
@@ -17,13 +29,46 @@ function loadNotifications() {
 // Save notifications to localStorage
 function saveNotifications() {
   try {
-    localStorage.setItem("notifications", JSON.stringify(notifications));
+    localStorage.setItem(getStorageKey(), JSON.stringify(notifications));
   } catch (e) {
     console.error("Failed to save notifications:", e);
   }
 }
 
+// Load deleted notification hashes from localStorage (user-specific)
+function loadDeletedHashes() {
+  try {
+    const stored = localStorage.getItem(getStorageKey("deleted"));
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error("Failed to load deleted hashes:", e);
+    return [];
+  }
+}
+
+// Save deleted notification hashes to localStorage (user-specific)
+function saveDeletedHashes(hashes) {
+  try {
+    localStorage.setItem(getStorageKey("deleted"), JSON.stringify(hashes));
+  } catch (e) {
+    console.error("Failed to save deleted hashes:", e);
+  }
+}
+
+// Create a hash for a notification to detect duplicates
+function createNotificationHash(notification) {
+  return `${notification.type || 'unknown'}:${notification.title}:${notification.message}`;
+}
+
 export const notificationStore = {
+  // Set the current user (call this when user logs in/out)
+  setCurrentUser: (userId) => {
+    setCurrentUser(userId);
+    // Reload notifications for the new user
+    loadNotifications();
+    notificationStore.notify();
+  },
+
   // Add listener for state changes
   subscribe: (listener) => {
     listeners.push(listener);
@@ -49,9 +94,26 @@ export const notificationStore = {
     return notifications.filter(n => !n.read).length;
   },
 
-  // Add new notification
+  // Add new notification (with duplicate prevention)
   add: (notification) => {
     loadNotifications();
+    const deletedHashes = loadDeletedHashes();
+    const hash = createNotificationHash(notification);
+    
+    // Don't add if this notification was previously deleted by this user
+    if (deletedHashes.includes(hash)) {
+      return null;
+    }
+    
+    // Don't add if an identical unread notification already exists for this user
+    const isDuplicate = notifications.some(
+      n => !n.read && createNotificationHash(n) === hash
+    );
+    
+    if (isDuplicate) {
+      return null;
+    }
+    
     const newNotification = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
@@ -75,6 +137,17 @@ export const notificationStore = {
     }
   },
 
+  // Mark notification as unread
+  markAsUnread: (notificationId) => {
+    loadNotifications();
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification) {
+      notification.read = false;
+      saveNotifications();
+      notificationStore.notify();
+    }
+  },
+
   // Mark all as read
   markAllAsRead: () => {
     loadNotifications();
@@ -90,12 +163,29 @@ export const notificationStore = {
     notificationStore.notify();
   },
 
-  // Remove specific notification
+  // Remove specific notification (and remember it was deleted)
   remove: (notificationId) => {
     loadNotifications();
+    const notification = notifications.find(n => n.id === notificationId);
+    
+    if (notification) {
+      // Record this notification as deleted so it won't be re-added for this user
+      const hash = createNotificationHash(notification);
+      const deletedHashes = loadDeletedHashes();
+      if (!deletedHashes.includes(hash)) {
+        deletedHashes.push(hash);
+        saveDeletedHashes(deletedHashes);
+      }
+    }
+    
     notifications = notifications.filter(n => n.id !== notificationId);
     saveNotifications();
     notificationStore.notify();
+  },
+  
+  // Clear all deleted notification tracking for current user (admin/debug function)
+  clearDeletedTracking: () => {
+    saveDeletedHashes([]);
   },
 
   // Add student-specific notifications

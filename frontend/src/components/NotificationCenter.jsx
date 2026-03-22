@@ -61,6 +61,10 @@ export default function NotificationCenter() {
     notificationStore.markAsRead(notificationId);
   };
 
+  const handleMarkAsUnread = (notificationId) => {
+    notificationStore.markAsUnread(notificationId);
+  };
+
   const handleRemove = (notificationId) => {
     notificationStore.remove(notificationId);
   };
@@ -372,7 +376,7 @@ export default function NotificationCenter() {
                       </div>
                     </div>
 
-                    {/* Unread indicator and close button */}
+                    {/* Unread indicator and action buttons */}
                     <div
                       style={{
                         display: "flex",
@@ -394,7 +398,46 @@ export default function NotificationCenter() {
                           }}
                         />
                       )}
+                      {/* Toggle Read/Unread Button */}
                       <button
+                        title={notif.read ? "Mark as unread" : "Mark as read"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (notif.read) {
+                            handleMarkAsUnread(notif.id);
+                          } else {
+                            handleMarkAsRead(notif.id);
+                          }
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: C.muted,
+                          cursor: "pointer",
+                          fontSize: 14,
+                          padding: "4px",
+                          transition: "all 0.2s",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 24,
+                          height: 24,
+                          borderRadius: 4,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = C.blue;
+                          e.currentTarget.style.background = `${C.blue}08`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = C.muted;
+                          e.currentTarget.style.background = "none";
+                        }}
+                      >
+                        {notif.read ? "↩" : "◯"}
+                      </button>
+                      {/* Delete Button */}
+                      <button
+                        title="Delete notification"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRemove(notif.id);

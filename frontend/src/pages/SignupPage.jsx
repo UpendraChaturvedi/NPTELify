@@ -19,21 +19,15 @@ const C = {
 /* ─── Logo ─── */
 function Logo({ onClick }) {
   return (
-    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-            <img
-                src="/logo_half.png"
-                alt="logo"
-                style={{
-                    width: 36,
-                    height: 36,
-                    objectFit: "contain"
-                }}
-                />
-            <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
-              <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
-            </span>
-         </div>
+    <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:9, background:"none", border:"none", cursor:"pointer", padding:0 }}>
+      <img
+        src="/logo_half.png"
+        alt="logo"
+        style={{ width:36, height:36, objectFit:"contain" }}
+      />
+      <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
+        <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
+      </span>
     </button>
   );
 }
@@ -42,19 +36,30 @@ function Logo({ onClick }) {
 function Navbar() {
   const navigate = useNavigate();
   const [hov, setHov] = useState(false);
+  const [hovHelp, setHovHelp] = useState(false);
   return (
     <nav style={{ position:"sticky", top:0, zIndex:50, background:C.card, borderBottom:`1.5px solid ${C.border}`, fontFamily:C.font }}>
-      <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 24px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <Logo onClick={() => navigate("/home")} />
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:13, color:C.muted, fontWeight:500 }}>Already have an account?</span>
+        <div style={{ display:"flex", alignItems:"center", gap:20 }}>
           <button
-            onClick={() => navigate("/login")}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
-            style={{ padding:"9px 20px", borderRadius:10, fontSize:13, fontWeight:700, color: hov ? "#fff" : C.blue, background: hov ? C.blue : "transparent", border:`1.5px solid ${C.blue}`, cursor:"pointer", transition:"all 0.18s", fontFamily:C.font }}>
-            Log In
+            onClick={() => navigate("/help")}
+            onMouseEnter={() => setHovHelp(true)}
+            onMouseLeave={() => setHovHelp(false)}
+            style={{ padding:"9px 20px", borderRadius:10, fontSize:13, fontWeight:700, color:"#fff", background: hovHelp ? "#e56c0a" : C.orange, border:"none", cursor:"pointer", transition:"background 0.18s", fontFamily:C.font }}
+          >
+            Help
           </button>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:13, color:C.muted, fontWeight:500 }}>Already have an account?</span>
+            <button
+              onClick={() => navigate("/login")}
+              onMouseEnter={() => setHov(true)}
+              onMouseLeave={() => setHov(false)}
+              style={{ padding:"9px 20px", borderRadius:10, fontSize:13, fontWeight:700, color: hov ? "#fff" : C.blue, background: hov ? C.blue : "transparent", border:`1.5px solid ${C.blue}`, cursor:"pointer", transition:"all 0.18s", fontFamily:C.font }}>
+              Log In
+            </button>
+          </div>
         </div>
       </div>
     </nav>

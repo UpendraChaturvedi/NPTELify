@@ -1,27 +1,19 @@
 // QuestionBankPage.jsx — Reusable question library management
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import DashboardLayout from "../components/DashboardLayout";
 
 const C = {
   navy:"#1a3a6b", blue:"#2563eb", orange:"#f97316", green:"#16a34a", red:"#dc2626",
   bg:"#f5f8ff", card:"#ffffff", altBg:"#eaf0fb", border:"#dce8fb", muted:"#7a8faf", body:"#4a6490",
-  font:"'DM Sans','Segoe UI',sans-serif",
-};
-
-const getQuestionBankIcon = (type) => {
-  const icons = {
-    import: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
-    document: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M4 7v12a2 2 0 002 2h12a2 2 0 002-2V7M9 7h6M9 11h6M9 15h2M4 7h16M9 3h6a2 2 0 012 2v2H7V5a2 2 0 012-2z"/></svg>,
-    tools: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:'100%', height:'100%' }}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6h2zm0 8h-2v2h2z"/></svg>,
-    plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:'100%', height:'100%' }}><path d="M12 5v14M5 12h14"/></svg>,
-    back: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:'100%', height:'100%' }}><path d="M15 18l-6-6 6-6"/></svg>,
-  };
-  return icons[type] || icons.document;
+  font:"'DM Sans','Segoe UI',sans-serif", sidebar:"#ffffff", purple:"#7c3aed"
 };
 
 export default function QuestionBankPage() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const userName = user?.name || "Examiner";
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -56,12 +48,10 @@ export default function QuestionBankPage() {
     }
 
     if (editingId !== null) {
-      // Update existing
       const updated = questions.map(q => q.id === editingId ? { ...formData, id: editingId } : q);
       saveQuestions(updated);
       setEditingId(null);
     } else {
-      // Add new
       const newQuestion = {
         ...formData,
         id: Date.now(),
@@ -100,9 +90,11 @@ export default function QuestionBankPage() {
   }
 
   return (
-    <DashboardLayout pageTitle="Question Bank">
-      <div style={{ minHeight:"100vh", background:C.bg, fontFamily:C.font, padding:"32px 20px" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto" }}>
+    <DashboardLayout 
+      pageTitle="Question Bank"
+      activeNav="question-bank"
+    >
+      <div style={{ maxWidth:1200, margin:"0 auto" }}>
         {/* Header */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:32 }}>
           <div>
@@ -220,16 +212,6 @@ export default function QuestionBankPage() {
               </div>
             ))
           )}
-        </div>
-
-        {/* Back Button */}
-        <div style={{ marginTop:32, textAlign:"center" }}>
-          <button onClick={() => navigate(-1)}
-            style={{ padding:"12px 32px", borderRadius:12, background:C.altBg, border:`1.5px solid ${C.border}`, fontWeight:700, cursor:"pointer", fontFamily:C.font, display:"flex", alignItems:"center", gap:8, margin:"0 auto" }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:16, height:16 }}><path d="M15 18l-6-6 6-6"/></svg>
-            Back
-          </button>
-        </div>
         </div>
       </div>
     </DashboardLayout>

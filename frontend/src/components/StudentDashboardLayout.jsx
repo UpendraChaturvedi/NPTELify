@@ -1,87 +1,61 @@
-import { useState, useEffect } from "react";
-import ResultsDashboardPage from "../components/ResultDashboardPage";
-import ProgressDashboardPage from "../components/ProgressDashboardPage";
-import SolutionDashboardPage from "../components/SolutionDashBoardPage";
-import MainDashboardPage from "../components/MainDashboardPage";
-import NotificationCenter from "../components/NotificationCenter";
-import ProfileDropdown from "../components/ProfileDropdown";
+// StudentDashboardLayout.jsx — Master layout for student dashboards
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import NotificationCenter from "./NotificationCenter";
+import ProfileDropdown from "./ProfileDropdown";
+
 const C = {
   navy: "#1a3a6b", blue: "#2563eb", orange: "#f97316", red: "#dc2626",
-  bg: "#f5f8ff", card: "#ffffff", altBg: "#eaf0fb",
+  green: "#16a34a", purple: "#7c3aed",
+  bg: "#f0f4f8", card: "#ffffff", altBg: "#eaf0fb",
   border: "#dce8fb", muted: "#7a8faf", body: "#4a6490",
+  sidebar: "#ffffff",
   font: "'DM Sans', 'Segoe UI', sans-serif",
 };
 
+const NAV_ITEMS = [
+  { id: "main", label: "Main Dashboard", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+  { id: "results", label: "Results Dashboard", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
+  { id: "progress", label: "Progress Dashboard", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg> },
+  { id: "solutions", label: "Solution Dashboard", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
+];
+
 const getProfileIcon = (type) => {
   const icons = {
-    profile: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 110 8 4 4 0 010-8z"/></svg>,
-    moon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-    sun: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-    help: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>,
-    logout: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>,
     info: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
     phone: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>,
   };
-  return icons[type] || icons.profile;
+  return icons[type] || icons.info;
 };
-
-const NAV = [
-  {
-    id: "main", label: "Main Dashboard",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
-  },
-  {
-    id: "results", label: "Results Dashboard",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
-  },
-  {
-    id: "progress", label: "Progress Dashboard",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>,
-  },
-  {
-    id: "solutions", label: "Solution Dashboard",
-    icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18,height:18 }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-  },
-];
 
 function Logo({ onClick }) {
   return (
     <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:8, background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-            <img
-                src="/logo_half.png"
-                alt="logo"
-                style={{
-                    width: 36,
-                    height: 36,
-                    objectFit: "contain"
-                }}
-                />
-            <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
-              <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
-            </span>
-          </div>
+      <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+        <img src="/logo_half.png" alt="logo" style={{ width: 36, height: 36, objectFit: "contain" }}/>
+        <span style={{ fontWeight:900, fontSize:22, letterSpacing:"-0.5px" }}>
+          <span style={{ color:"#1a3a6b" }}>NPTEL</span><span style={{ color:"#f97316" }}>ify</span>
+        </span>
+      </div>
     </button>
   );
 }
 
-function Sidebar({ active, onSelect, auth, navigate }) {
+const StudentSidebar = memo(function StudentSidebarComponent({ active, onSelect, auth, navigate }) {
   const [hovId, setHovId] = useState(null);
   const userName = auth?.user?.name || "User";
   const getInitials = (name) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
+
+  const handleNavClick = useCallback((id) => {
+    onSelect(id);
+  }, [onSelect]);
+
   return (
-    <aside style={{ width:238, background:C.card, borderRight:`1.5px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0, fontFamily:C.font }}>
-      {/* Logo + avatar */}
-      <div style={{ padding:"20px 20px 16px", borderBottom:`1.5px solid ${C.border}` }}>
+    <aside style={{ width:240, background:C.sidebar, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0, height:"100vh", overflowY:"auto", fontFamily:C.font }}>
+      <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${C.border}` }}>
         <Logo onClick={() => navigate("/candidate/dashboard")} />
         <div style={{ marginTop:16, display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg, ${C.blue}, ${C.blue}dd)`, display:"flex", alignItems:"center", justifyContent:"center", boxShadow: `0 3px 12px ${C.blue}44, inset 0 1px 2px rgba(255,255,255,0.4)`, position:"relative" }}>
@@ -94,14 +68,14 @@ function Sidebar({ active, onSelect, auth, navigate }) {
           </div>
         </div>
       </div>
-      {/* Nav */}
+
       <nav style={{ padding:"12px", flex:1, display:"flex", flexDirection:"column", gap:2 }}>
         <div style={{ fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.1em", textTransform:"uppercase", padding:"6px 14px 4px" }}>Menu</div>
-        {NAV.map(item => {
+        {NAV_ITEMS.map(item => {
           const isActive = active === item.id;
-          const isHov    = hovId === item.id;
+          const isHov = hovId === item.id;
           return (
-            <button key={item.id} onClick={() => onSelect(item.id)}
+            <button key={item.id} onClick={() => handleNavClick(item.id)}
               onMouseEnter={() => setHovId(item.id)}
               onMouseLeave={() => setHovId(null)}
               style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderRadius:10, border:"none", cursor:"pointer", textAlign:"left", width:"100%", fontFamily:C.font, fontSize:13, fontWeight: isActive ? 700 : 500, transition:"all 0.15s",
@@ -115,121 +89,78 @@ function Sidebar({ active, onSelect, auth, navigate }) {
           );
         })}
       </nav>
-      {/* Logout */}
-      <div style={{ padding:"14px 20px", borderTop:`2px solid ${C.border}` }}>
-        <button
-            onClick={() => { auth.logout(); navigate("/login"); }}
-            style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 900,
-            color: C.red
-            }}
-        >
-            <div
-            style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: "#fef2f2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-            }}
-            >
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={C.red}
-                strokeWidth="2"
-                style={{ width: 14, height: 14 }}
-            >
-                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            </div>
+      
+      {/* Help & Support */}
+      <div style={{ padding:"14px 20px" }}>
+        <div onClick={() => navigate("/help")} style={{ background:C.altBg, borderRadius:12, border:`1px solid ${C.border}`, padding:"12px", cursor:"pointer", transition:"all 0.2s", }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.boxShadow = `0 4px 12px ${C.blue}20`; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}>
+          <div style={{ fontSize:11, fontWeight:800, color:C.navy, marginBottom:4, display:"flex", alignItems:"center", gap:4 }}>{getProfileIcon('info')} Help &amp; Support</div>
+          <div style={{ fontSize:10, color:C.muted, marginBottom:3 }}>Technical Support</div>
+          <div style={{ fontSize:11, fontWeight:700, color:C.blue, display:"flex", alignItems:"center", gap:4 }}>{getProfileIcon('phone')} 7037555457</div>
+        </div>
+      </div>
 
-            <span>Log Out</span>
+      <div style={{ padding:"14px 20px", borderTop:`1px solid ${C.border}` }}>
+        <button onClick={() => { auth.logout(); navigate("/login"); }}
+          style={{ display: "flex", alignItems: "center", gap: 10, background: "transparent", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 900, color: C.red }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" style={{ width: 14, height: 14 }}>
+              <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </div>
+          <span>Log Out</span>
         </button>
       </div>
     </aside>
   );
-}
+});
 
-function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onToggleCalendar }) {
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem("darkMode");
-    return saved ? JSON.parse(saved) : false;
-  });
-  const getInitials = (name) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+const StudentTopbar = memo(({ pageTitle, userName, onLogout, navigate, showCalendar, onToggleCalendar }) => {
   const titles = { main:"Main Dashboard", results:"Results Dashboard", progress:"Progress Dashboard", solutions:"Solution Dashboard" };
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" }) + ", " +
     now.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
 
-  const handleLogout = () => {
-    onLogout();
-    navigate("/login");
-  };
-
-  const handleEditProfile = () => {
-    navigate("/candidate/profile");
-    setProfileOpen(false);
-  };
-
-  const handleThemeToggle = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    localStorage.setItem("darkMode", JSON.stringify(newMode));
-    // Apply theme to document
-    if (newMode) {
-      document.body.style.filter = "invert(1) hue-rotate(180deg)";
-    } else {
-      document.body.style.filter = "none";
-    }
-  };
-
   return (
-    <header style={{ height:60, background:C.card, borderBottom:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 28px", flexShrink:0, fontFamily:C.font }}>
-      <div>
-        <span style={{ fontSize:15, fontWeight:800, color:C.navy }}>{titles[activePage]}</span>
-        <span style={{ fontSize:12, color:C.muted, marginLeft:14 }}>{dateStr}</span>
+    <header style={{ height:52, background:C.card, borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", flexShrink:0, fontFamily:C.font }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <span style={{ fontSize:15, fontWeight:800, color:C.navy }}>{titles[pageTitle] || pageTitle}</span>
+        <span style={{ fontSize:11, color:C.muted, background:C.bg, padding:"3px 10px", borderRadius:999, border:`1px solid ${C.border}` }}>
+          {dateStr}
+        </span>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        <button
-          onClick={onToggleCalendar}
-          style={{
-            display:"flex",
-            alignItems:"center",
-            justifyContent:"center",
-            width:36,
-            height:36,
-            border:"none",
-            background:"transparent",
-            cursor:"pointer",
-            borderRadius:8,
-            transition:"all 0.2s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = C.altBg}
-          onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+        <button onClick={onToggleCalendar}
           title={showCalendar ? "Hide Calendar" : "Show Calendar"}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke={C.navy} strokeWidth="2.5" style={{ width:20, height:20 }}>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: showCalendar ? `linear-gradient(135deg, ${C.blue}, ${C.blue}dd)` : `linear-gradient(135deg, ${C.altBg}, ${C.bg})`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            border: `2px solid ${showCalendar ? C.blue : C.border}`,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            boxShadow: showCalendar 
+              ? `0 4px 12px ${C.blue}33, inset 0 1px 0 rgba(255,255,255,0.2)` 
+              : `0 2px 8px rgba(0, 0, 0, 0.08)`,
+            color: showCalendar ? "#fff" : C.blue,
+          }}
+          onMouseEnter={(e) => {
+            if (!showCalendar) {
+              e.currentTarget.style.boxShadow = `0 4px 16px ${C.blue}26, inset 0 1px 0 rgba(255,255,255,0.2)`;
+              e.currentTarget.style.transform = "scale(1.05)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showCalendar) {
+              e.currentTarget.style.boxShadow = `0 2px 8px rgba(0, 0, 0, 0.08)`;
+              e.currentTarget.style.transform = "scale(1)";
+            }
+          }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:18, height:18 }}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
         </button>
         <div style={{ width:1, height:24, background:C.border }}></div>
@@ -238,47 +169,36 @@ function Topbar({ activePage, userName, onLogout, navigate, showCalendar, onTogg
           <ProfileDropdown C={C} userName={userName} userRole="Candidate" />
         </div>
       </div>
-      
     </header>
   );
-}
+});
 
-function CalendarPanel() {
+
+const StudentCalendarPanel = memo(function CalendarPanelComponent() {
   const [upcomingQuizzes, setUpcomingQuizzes] = useState([]);
   const [pastQuizzes, setPastQuizzes] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showPast, setShowPast] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
-  const now   = new Date();
-  const year  = selectedMonth.getFullYear();
+  const now = new Date();
+  const year = selectedMonth.getFullYear();
   const month = selectedMonth.getMonth();
   const today = now.getDate();
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const DAYS   = ["M","T","W","T","F","S","S"];
+  const DAYS = ["M","T","W","T","F","S","S"];
 
-  // Month navigation handlers
-  const goToPreviousMonth = () => {
+  const goToPreviousMonth = useCallback(() => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
     setSelectedDate(null);
-  };
+  }, [selectedMonth]);
 
-  const goToNextMonth = () => {
+  const goToNextMonth = useCallback(() => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1));
     setSelectedDate(null);
-  };
+  }, [selectedMonth]);
 
-  // Days in month, first day offset (Mon=0)
-  const dim    = new Date(year, month+1, 0).getDate();
-  const first  = (new Date(year, month, 1).getDay() + 6) % 7;
-  const cells  = [];
-  for (let i = 0; i < first; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(d);
-
-  const isCurrentMonth = (now.getFullYear() === year && now.getMonth() === month);
-
-  // Fetch upcoming and past quizzes
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
@@ -290,7 +210,6 @@ function CalendarPanel() {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
           }).then(r => r.json())
         ]);
-        
         setUpcomingQuizzes(upcomingData || []);
         setPastQuizzes(pastData || []);
       } catch (e) {
@@ -304,30 +223,29 @@ function CalendarPanel() {
     fetchQuizzes();
   }, []);
 
-  const allQuizzes = showPast ? pastQuizzes : upcomingQuizzes;
+  const dim = new Date(year, month+1, 0).getDate();
+  const first = (new Date(year, month, 1).getDay() + 6) % 7;
+  const cells = [];
+  for (let i = 0; i < first; i++) cells.push(null);
+  for (let d = 1; d <= dim; d++) cells.push(d);
+  const isCurrentMonth = (now.getFullYear() === year && now.getMonth() === month);
 
-  const quizDatesThisMonth = allQuizzes
-    .filter(q => {
-      const qDate = new Date(q.scheduledDateTime);
-      return qDate.getFullYear() === year && qDate.getMonth() === month;
-    })
-    .map(q => new Date(q.scheduledDateTime).getDate());
+  const allQuizzes = useMemo(() => showPast ? pastQuizzes : upcomingQuizzes, [showPast, pastQuizzes, upcomingQuizzes]);
+  
+  const quizDatesThisMonth = useMemo(() => allQuizzes
+    .filter(q => { const qDate = new Date(q.scheduledDateTime); return qDate.getFullYear() === year && qDate.getMonth() === month; })
+    .map(q => new Date(q.scheduledDateTime).getDate()), [allQuizzes, year, month]);
 
-  const getQuizzesForDate = (day) => {
-    return allQuizzes.filter(q => {
-      const qDate = new Date(q.scheduledDateTime);
-      return qDate.getDate() === day && qDate.getMonth() === month && qDate.getFullYear() === year;
-    });
-  };
+  const getQuizzesForDate = useCallback((day) => {
+    return allQuizzes.filter(q => { const qDate = new Date(q.scheduledDateTime); return qDate.getDate() === day && qDate.getMonth() === month && qDate.getFullYear() === year; });
+  }, [allQuizzes, month, year]);
 
-  const examDates = [...new Set(quizDatesThisMonth)];
+  const examDates = useMemo(() => [...new Set(quizDatesThisMonth)], [quizDatesThisMonth]);
   const colorMap = [C.blue, C.orange, "#16a34a", "#dc2626", "#9333ea", "#06b6d4"];
 
   return (
     <div style={{ width:220, flexShrink:0, display:"flex", flexDirection:"column", gap:12, fontFamily:C.font }}>
-      {/* Calendar */}
       <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, padding:"16px 14px" }}>
-        {/* Month Navigation */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, gap:8 }}>
           <button onClick={goToPreviousMonth} style={{ padding:"4px 8px", fontSize:11, fontWeight:700, borderRadius:6, border:`1px solid ${C.border}`, background:C.bg, color:C.navy, cursor:"pointer", transition:"all 0.2s" }}>←</button>
           <div style={{ display:"flex", justifyContent:"center", gap:6, flex:1 }}>
@@ -343,7 +261,7 @@ function CalendarPanel() {
           {cells.map((d,i) => {
             if (!d) return <div key={i}/>;
             const isToday = isCurrentMonth && d === today;
-            const isExam  = examDates.includes(d);
+            const isExam = examDates.includes(d);
             const markerColor = showPast ? "#9ca3af" : C.orange;
             return (
               <div key={i} onClick={() => isExam && setSelectedDate(d)}
@@ -361,7 +279,6 @@ function CalendarPanel() {
         </div>
       </div>
 
-      {/* Toggle Past/Upcoming */}
       <div style={{ display:"flex", gap:6, background:C.bg, borderRadius:10, padding:4 }}>
         <button onClick={() => { setShowPast(false); setSelectedDate(null); }}
           style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"none", background:!showPast?C.blue:"transparent", color:!showPast?"#fff":C.body, fontSize:11, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
@@ -373,14 +290,12 @@ function CalendarPanel() {
         </button>
       </div>
 
-      {/* Quizzes list */}
       <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, padding:"14px" }}>
         <div style={{ fontSize:12, fontWeight:800, color:C.navy, marginBottom:10 }}>
           {selectedDate ? `${showPast?"Past":"Upcoming"} on ${selectedDate} ${MONTHS[month]}` : (showPast?"Past Quizzes":"Upcoming Exams")}
         </div>
         {selectedDate && (
-          <button onClick={() => setSelectedDate(null)} 
-            style={{ fontSize:10, color:C.blue, background:"none", border:"none", cursor:"pointer", marginBottom:8, fontWeight:600 }}>
+          <button onClick={() => setSelectedDate(null)} style={{ fontSize:10, color:C.blue, background:"none", border:"none", cursor:"pointer", marginBottom:8, fontWeight:600 }}>
             ← Back to all
           </button>
         )}
@@ -419,48 +334,41 @@ function CalendarPanel() {
 
     </div>
   );
-}
+});
 
-const PAGES = {
-  main:      <MainDashboardPage/>,
-  results:   <ResultsDashboardPage/>,
-  progress:  <ProgressDashboardPage/>,
-  solutions: <SolutionDashboardPage/>,
-};
-
-export default function CandidateDashboard() {
+export default function StudentDashboardLayout({ pageTitle = "main", activeNav = "main", children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const auth = { user, logout };
-  const [showCalendar, setShowCalendar] = useState(true);
+  const [showCalendar, setShowCalendar] = useState(() => {
+    const saved = localStorage.getItem("studentCalendarVisible");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
-  const pathToPage = {
-    "/candidate/dashboard": "main",
-    "/candidate/results":   "results",
-    "/candidate/progress":  "progress",
-    "/candidate/solutions": "solutions",
-  };
-  const active = pathToPage[location.pathname] || "main";
+  useEffect(() => {
+    localStorage.setItem("studentCalendarVisible", JSON.stringify(showCalendar));
+  }, [showCalendar]);
 
-  const handleSelect = (id) => {
+  const handleSelect = useCallback((id) => {
     if (id === "main") navigate("/candidate/dashboard");
     else navigate(`/candidate/${id}`);
-  };
+  }, [navigate]);
+
+  const handleToggleCalendar = useCallback(() => {
+    setShowCalendar(prev => !prev);
+  }, []);
 
   return (
     <div style={{ display:"flex", height:"100vh", background:C.bg, fontFamily:C.font, overflow:"hidden" }}>
-      <Sidebar active={active} onSelect={handleSelect} auth={auth} navigate={navigate}/>
+      <StudentSidebar active={activeNav} onSelect={handleSelect} auth={{ user, logout }} navigate={navigate}/>
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        <Topbar activePage={active} userName={user?.name || "User"} onLogout={logout} navigate={navigate} showCalendar={showCalendar} onToggleCalendar={() => setShowCalendar(!showCalendar)}/>
+        <StudentTopbar pageTitle={pageTitle} userName={user?.name || "User"} onLogout={logout} navigate={navigate} showCalendar={showCalendar} onToggleCalendar={handleToggleCalendar}/>
         <div style={{ flex:1, display:"flex", overflow:"hidden" }}>
-          <main style={{ flex:1, overflow:"auto", padding:"24px 28px" }}>
-            {PAGES[active]}
+          <main style={{ flex:1, overflow:"auto", padding:"20px 22px" }}>
+            {children}
           </main>
-        
           {showCalendar && (
             <div style={{ padding:"20px 16px 20px 0", overflowY:"auto", flexShrink:0 }}>
-              <CalendarPanel/>
+              <StudentCalendarPanel/>
             </div>
           )}
         </div>

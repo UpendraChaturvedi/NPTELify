@@ -1,6 +1,6 @@
 // ExaminerMainDashboard.jsx
 import { useState, useEffect } from "react";
-import { getMyQuizzes, deleteQuiz, downloadQuizReportPdf } from "../api/quizApi";
+import { getMyQuizzes, deleteQuiz } from "../api/quizApi";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { notificationStore } from "../utils/notificationStore";
@@ -102,7 +102,6 @@ function QuizCard({ quiz, onRefresh, quizType = "upcoming" }) {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [copying, setCopying] = useState(false);
   
   const durationLabel = `${quiz.durationMinutes} min`;
@@ -142,17 +141,7 @@ function QuizCard({ quiz, onRefresh, quizType = "upcoming" }) {
     navigate(`/examiner/results?quizId=${quiz.id}`);
   };
   
-  const handleDownloadPdf = async () => {
-    try {
-      setDownloading(true);
-      await downloadQuizReportPdf(quiz.id);
-      setDownloading(false);
-    } catch (error) {
-      console.error("Download error:", error);
-      alert("Failed to download PDF: " + (error.message || "Unknown error"));
-      setDownloading(false);
-    }
-  };
+
 
   const handleCopyQuiz = async () => {
     try {
@@ -207,19 +196,6 @@ function QuizCard({ quiz, onRefresh, quizType = "upcoming" }) {
               <button onClick={handleReview} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,cursor:"pointer",transition:"all 0.2s",display:"flex",alignItems:"center",gap:6 }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M3 3v18h18M3 18l4-5 4 3 5-7 5 3"/></svg>
                 <span>Review</span>
-              </button>
-              <button onClick={handleDownloadPdf} disabled={downloading} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.green,background:"transparent",color:C.green,cursor:downloading?"not-allowed":"pointer",transition:"all 0.2s",opacity:downloading?0.6:1,display:"flex",alignItems:"center",gap:6 }}>
-                {downloading ? (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, animation:"spin 1s linear infinite" }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                    <span>Generating...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                    <span>PDF</span>
-                  </>
-                )}
               </button>
               <button onClick={handleCopyQuiz} disabled={copying} style={{ padding:"6px 14px",fontSize:12,fontWeight:600,borderRadius:8,border:"1.5px solid "+C.purple,background:"transparent",color:C.purple,cursor:copying?"not-allowed":"pointer",transition:"all 0.2s",opacity:copying?0.6:1,display:"flex",alignItems:"center",gap:6 }}>
                 {copying ? (
@@ -346,7 +322,7 @@ export default function ExaminerMainDashboard() {
   });
 
   return (
-    <div style={{ display:"flex",flexDirection:"column",gap:20,fontFamily:C.font }}>
+    <div style={{ display:"flex",flexDirection:"column",gap:20,fontFamily:C.font,height:"100vh",overflow:"hidden" }}>
       <style>{pulseStyle}</style>
 
       {/* Hero Banner */}
@@ -372,10 +348,10 @@ export default function ExaminerMainDashboard() {
       </div>
 
       {/* Three-column */}
-      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:18 }}>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:18,flex:1,overflow:"hidden" }}>
 
         {/* Upcoming */}
-        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
+        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px",display:"flex",flexDirection:"column",overflow:"hidden" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:C.green,display:"inline-block" }}/>
             <svg viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2" style={{ width:16, height:16 }}><path d="M12 2v20M2 12h20M4 4l16 16M20 4l-16 16"/></svg>
@@ -384,14 +360,14 @@ export default function ExaminerMainDashboard() {
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : upcoming.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No upcoming quizzes scheduled.</div>
           ) : (
-            <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
+            <div style={{ display:"flex",flexDirection:"column",gap:10,overflowY:"auto",flex:1 }}>
               {upcoming.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="upcoming"/>)}
             </div>
           )}
         </div>
 
         {/* Live */}
-        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
+        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px",display:"flex",flexDirection:"column",overflow:"hidden" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:"#dc2626",display:"inline-block",animation:"pulse 1s infinite" }}/>
             <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/></svg>
@@ -400,14 +376,14 @@ export default function ExaminerMainDashboard() {
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : live.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No live quizzes at the moment.</div>
           ) : (
-            <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
+            <div style={{ display:"flex",flexDirection:"column",gap:10,overflowY:"auto",flex:1 }}>
               {live.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="live"/>)}
             </div>
           )}
         </div>
 
         {/* Past */}
-        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px" }}>
+        <div style={{ background:C.card,borderRadius:18,border:`1.5px solid ${C.border}`,padding:"20px",display:"flex",flexDirection:"column",overflow:"hidden" }}>
           <div style={{ fontSize:14,fontWeight:800,color:C.navy,marginBottom:14,display:"flex",alignItems:"center",gap:7 }}>
             <span style={{ width:8,height:8,borderRadius:"50%",background:C.orange,display:"inline-block" }}/>
             <svg viewBox="0 0 24 24" fill="none" stroke={C.orange} strokeWidth="2" style={{ width:16, height:16 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -416,7 +392,7 @@ export default function ExaminerMainDashboard() {
           {loading ? <LoadingState/> : error ? <ErrorState message={error}/> : past.length === 0 ? (
             <div style={{ fontSize:13,color:C.muted,padding:"12px 0" }}>No past quizzes yet.</div>
           ) : (
-            <div style={{ display:"flex",flexDirection:"column",gap:10,maxHeight:420,overflowY:"auto" }}>
+            <div style={{ display:"flex",flexDirection:"column",gap:10,overflowY:"auto",flex:1 }}>
               {past.map(q => <QuizCard key={q.id} quiz={q} onRefresh={loadQuizzes} quizType="past"/>)}
             </div>
           )}
