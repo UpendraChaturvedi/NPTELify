@@ -549,7 +549,7 @@ export default function HelpSupportPage() {
       <div style={{ paddingTop: isLoggedIn ? 60 : 0 }}>
       {/* Gradient Header (only when logged out) */}
       {!isLoggedIn && (
-        <div style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`, color: "white", padding: "100px 32px", textAlign: "center", position: "relative", boxShadow: "0 12px 40px rgba(26, 58, 107, 0.25)" }}>
+        <div style={{ background: `linear-gradient(135deg, #1e40af 0%, #ea580c 100%)`, color: "white", padding: "100px 32px", textAlign: "center", position: "relative", boxShadow: "0 12px 40px rgba(234, 88, 12, 0.25)" }}>
           {/* Back Button */}
           <button
             onClick={handleBackClick}
@@ -592,7 +592,7 @@ export default function HelpSupportPage() {
 
       {/* Logged-in Hero Section */}
       {isLoggedIn && (
-        <div style={{ background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`, color: "white", padding: "90px 32px", textAlign: "center", boxShadow: "0 12px 40px rgba(26, 58, 107, 0.25)" }}>
+        <div style={{ background: `linear-gradient(135deg, #1e40af 0%, #ea580c 100%)`, color: "white", padding: "90px 32px", textAlign: "center", boxShadow: "0 12px 40px rgba(234, 88, 12, 0.25)" }}>
           <h1 style={{ fontSize: 56, fontWeight: 950, marginBottom: 20, letterSpacing: "-1px", lineHeight: 1.1, textShadow: "0 2px 4px rgba(0,0,0,0.1)", fontFamily: C.headingFont }}>
             {isStudent ? "Student Help Center" : "Examiner Help Center"}
           </h1>

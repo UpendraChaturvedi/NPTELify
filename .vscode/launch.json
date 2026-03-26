@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Spring Boot App",
+      "type": "java",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "mainClass": "com.backend.nptelify.NptelifyApplication",
+      "projectName": "backend"
+    }
+  ]
+}

@@ -208,7 +208,9 @@ export default function ResultsDashboardPage() {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
         <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"22px 24px" }}>
           <div style={{ fontSize:14, fontWeight:800, color:C.navy, marginBottom:18 }}>Score by Subject</div>
-          <DonutChart data={donutData} avgPct={avgScore}/>
+          <div style={{ display:"flex", justifyContent:"center", alignItems:"center", minHeight:280 }}>
+            <DonutChart data={donutData} avgPct={avgScore}/>
+          </div>
         </div>
         <div style={{ background:C.card, borderRadius:18, border:`1.5px solid ${C.border}`, padding:"22px 24px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
@@ -229,7 +231,7 @@ export default function ResultsDashboardPage() {
             <div>
               <div style={{ marginBottom:12 }}>
                 <div style={{ fontSize:12, color:C.muted, marginBottom:6 }}>Attempts in {monthYearString}:</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:240, overflowY:"auto", paddingRight:8 }}>
                   {selectedMonthAttempts.map(a => {
                     const pct = Math.round(a.percentage);
                     const pass = pct >= 60;

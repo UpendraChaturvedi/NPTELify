@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getAttemptDetail, getMyAttempts, downloadAttemptPdf } from "../api/quizApi";
 const C = {
   navy: "#1a3a6b", blue: "#2563eb", orange: "#f97316",
@@ -58,6 +58,7 @@ function QuestionCard({ q, idx }) {
 
 export default function SolutionDashboardPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [attemptId, setAttemptId] = useState(location.state?.attemptId ?? null);
   const [detail, setDetail] = useState(null);
   const [attempts, setAttempts] = useState([]);
@@ -159,10 +160,10 @@ export default function SolutionDashboardPage() {
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       {/* Back link */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
-        <button onClick={() => { setAttemptId(null); setDetail(null); setError(null); }}
+        <button onClick={() => navigate(-1)}
           style={{ background:"none", border:"none", color:C.blue, fontSize:13, fontWeight:700, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:6 }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width:14,height:14 }}><path d="M15 18l-6-6 6-6"/></svg>
-          All Attempts
+          Back
         </button>
         <button
           onClick={handleDownloadPdf}

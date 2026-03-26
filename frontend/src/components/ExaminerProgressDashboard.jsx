@@ -1,6 +1,7 @@
 // ExaminerProgressDashboard.jsx
 import { useState, useEffect } from "react";
 import { getExaminerStats } from "../api/quizApi";
+import { generateStudentProgressPDF } from "../utils/studentProgressPdfGenerator";
 
 const C = {
   navy:"#1a3a6b",blue:"#2563eb",orange:"#f97316",green:"#16a34a",red:"#dc2626",purple:"#7c3aed",
@@ -183,7 +184,7 @@ export default function ExaminerProgressDashboard() {
           <table style={{ width:"100%",borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ background:C.altBg }}>
-                {["#","Student","Email","Scores Trend","Avg Score","Trend","Status"].map(h=>(
+                {["#","Student","Email","Scores Trend","Avg Score","Trend","Status","Report"].map(h=>(
                   <th key={h} style={{ padding:"10px 16px",textAlign:"left",fontSize:12,fontWeight:700,color:C.muted }}>{h}</th>
                 ))}
               </tr>
@@ -206,6 +207,16 @@ export default function ExaminerProgressDashboard() {
                     <td style={{ padding:"12px 16px",fontSize:12,fontWeight:700,color:up?C.green:C.red }}>{s.trend}</td>
                     <td style={{ padding:"12px 16px" }}>
                       <span style={{ padding:"3px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:pass?"#f0fdf4":"#fef2f2",color:pass?C.green:C.red }}>{pass?"On Track":"Needs Help"}</span>
+                    </td>
+                    <td style={{ padding:"12px 16px" }}>
+                      <button
+                        onClick={async () => await generateStudentProgressPDF(s, stats)}
+                        style={{ fontSize:11,fontWeight:700,color:C.blue,background:"none",border:`1px solid ${C.blue}`,borderRadius:8,padding:"4px 10px",cursor:"pointer" }}
+                        title="Download progress report"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width:14, height:14, display:"inline", marginRight:4 }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        PDF
+                      </button>
                     </td>
                   </tr>
                 );
